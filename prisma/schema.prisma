@@ -1,0 +1,37 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/server/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Forms {
+  id Int @id @default(autoincrement())
+
+  // --- 关键索引字段 (用于列表展示和搜索) ---
+  projectName String  @map("project_name")  // 项目名称
+  department  String? // 所在部门
+  leaderName  String? @map("leader_name")   // 负责人姓名
+  status      String  @default("SUBMITTED") // 状态: SUBMITTED, APPROVED, REJECTED
+
+  // --- 完整数据 ---
+  content Json // 存储前端提交的所有表单数据 (JSON)
+
+  // --- 提交人信息 (快照) ---
+  submitterId   String @map("submitter_id") // NetID
+  submitterName String @map("submitter_name") // 姓名
+
+  // --- 时间戳 ---
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("forms") // 映射到数据库表名
+}

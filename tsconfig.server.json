@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist-server",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022",
+    "lib": ["ESNext"],
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/server/*"],
+      "@prisma/client": ["prisma/generated/client"]
+    },
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strict": true
+  },
+  "include": ["src/server/**/*"],
+  "exclude": ["node_modules", "prisma/**/*", "dist-server", "src/client"]
+}
