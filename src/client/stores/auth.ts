@@ -14,7 +14,6 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => currentUser.value?.isAdmin || false)
 
   // Actions
-
   /**
    * 初始化：如果有 token，尝试获取用户信息
    */
@@ -44,7 +43,6 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authAPI.validateTicket(ticket)
 
-      // 🔴 确认此处解构与后端返回一致
       // 后端返回: { token: "...", user: { ... } }
       // Axios 将其包裹在 data 中: res.data = { token: "...", user: { ... } }
       const { token: newToken, user } = res.data

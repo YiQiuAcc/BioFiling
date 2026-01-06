@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import jwt from 'jsonwebtoken'
 import { UnauthorizedError } from '@/utils/errors'
 import logger from '@/utils/logger'
-import { type AuthPayload } from '@/types'
+import { type User } from '@/types'
 
 const ADMIN_IDS = process.env.ADMIN_IDS?.split(',')
 
@@ -17,7 +17,7 @@ const checkEnv = () => {
  * 生成 JWT Token
  * @param payload 包含 netId, name, isAdmin
  */
-export const generateToken = (payload: AuthPayload) => {
+export const generateToken = (payload: User) => {
   checkEnv()
   return jwt.sign(payload, process.env.JWT_SECRET as string, {
     expiresIn: '8h',
@@ -42,10 +42,7 @@ export const authenticate = async (
   try {
     const token = authHeader.split(' ')[1]
     // 验证并解码
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET as string,
-    ) as AuthPayload
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as User
     // 管理员白名单
     const isAdmin = ADMIN_IDS?.includes(decoded.netId)
 

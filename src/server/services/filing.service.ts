@@ -66,14 +66,13 @@ export const filingService = {
     // === 处理图片字段移动 ===
     // 处理数组类型的图片 (certifyImagesPath)
     if (
-      processedData.certifyImagesPath &&
-      Array.isArray(processedData.certifyImagesPath)
+      Array.isArray(processedData.certifyImagesPath) &&
+      processedData.certifyImagesPath.length > 0
     ) {
       processedData.certifyImagesPath = processedData.certifyImagesPath.map(
         (p: string) => moveFileFromTempToFinal(p),
       )
     }
-
     // 如果只有单张图片字段，也可以这样处理
     // if (processedData.otherImage) {
     //   processedData.otherImage = moveFileFromTempToFinal(processedData.otherImage);

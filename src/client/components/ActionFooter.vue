@@ -1,25 +1,21 @@
 <template>
   <div class="bottom-action-bar">
     <div class="action-content">
-      <div class="action-info">
-        <span>当前状态:</span>
-        <t-tag theme="warning" variant="light">填写中</t-tag>
-      </div>
       <div class="action-buttons">
         <t-button
           theme="default"
           variant="outline"
           size="large"
           @click="handleReset"
-          class="btn-reset"
         >
           重置
         </t-button>
+
         <t-button
           theme="primary"
           size="large"
-          :loading="submitting"
-          @click="submitForm"
+          :loading="filingStore.submitting"
+          @click="emitSubmit"
           class="btn-submit"
         >
           <template #icon><save-icon /></template>
@@ -31,30 +27,26 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { SaveIcon } from 'tdesign-icons-vue-next'
 import { useFilingStore } from '@/stores/filing'
 
-const submitting = ref(false)
+// 定义事件
+const emit = defineEmits(['submit', 'reset'])
+
 const filingStore = useFilingStore()
 
-const handleReset = () => {
-  // 重置表单逻辑，可能需要调用store中的重置方法
-  MessagePlugin.info('表单已重置')
-  // filingStore.resetForm(); // 假设在store中有这个方法
+const emitSubmit = () => {
+  // 仅仅通知父组件：“用户点提交了，你看着办”
+  emit('submit')
 }
 
-const submitForm = async () => {
-  submitting.value = true
-  try {
-    // 触发提交事件，通过store执行提交逻辑
-    filingStore.triggerSubmit()
-  } catch (error) {
-    console.error('提交失败:', error)
-    MessagePlugin.error('提交失败，请重试')
-  } finally {
-    submitting.value = false
+const handleReset = () => {
+  const confirm = window.confirm('确定要重置所有已填写的内容吗？')
+  if (confirm) {
+    filingStore.resetForm()
+    emit('reset') // 通知父组件清除验证错误状态
+    MessagePlugin.success('表单已重置')
   }
 }
 </script>

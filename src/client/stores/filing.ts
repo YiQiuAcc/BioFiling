@@ -7,12 +7,15 @@ import {
 } from 'tdesign-vue-next'
 import { cloneDeep } from 'lodash-es'
 import { filingAPI } from '@/api/index'
+import router from '@/router/router'
 import { type FormDataState } from '@/types/index'
 
 export const useFilingStore = defineStore('filing', () => {
   const submitting = ref(false)
   const exporting = ref(false)
   const files = ref<UploadFile[]>([])
+  const records = ref<any[]>([]) // 备案记录列表
+  const loading = ref(false)
   // === Actions ===
   // === 默认状态工厂函数 ===
   const getDefaultFormData = (): FormDataState => ({
@@ -105,34 +108,66 @@ export const useFilingStore = defineStore('filing', () => {
   }
 
   // 提交逻辑
-  const onSubmit = async () => {
+  const triggerSubmit = async () => {
     submitting.value = true
     try {
       if (files.value && files.value.length > 0) {
-        // 获取后端返回的 dbPath 存入数据库 TDesign 将后端返回的数据挂载在 file.response 上
         files.value.forEach((file) => {
-          // 只有当文件上传成功且有 dbPath 时才推入
           if (file.response?.dbPath) {
-            formData.certifyImagesPath.push(file.response.dbPath)
+            if (!formData.certifyImagesPath.includes(file.response.dbPath)) {
+              formData.certifyImagesPath.push(file.response.dbPath)
+            }
           }
         })
       }
+
       const payload = cloneDeep(formData)
-      await filingAPI.createAndDownload(payload)
-      MessagePlugin.success('备案申请提交成功')
+      await filingAPI.submit(payload)
+      MessagePlugin.success('备案提交成功')
+
+      // 提交成功后，重置表单并跳转回首页
+      resetForm()
+      files.value = []
+      router.push('/')
       return true
     } catch (error: any) {
-      handleDownloadError(error)
+      MessagePlugin.error(error.response?.data?.message || '提交失败')
       return false
     } finally {
       submitting.value = false
     }
   }
 
+  // === 获取列表 ===
+  const fetchRecords = async () => {
+    loading.value = true
+    try {
+      const res = await filingAPI.getMyRecords()
+      records.value = res.data
+    } catch (error) {
+      console.error(error)
+      MessagePlugin.error('获取备案记录失败')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // === 下载单个文件 ===
+  const downloadRecordDoc = async (id: number, projectName: string) => {
+    try {
+      MessagePlugin.loading('正在生成文档...')
+      const response = await filingAPI.downloadRecord(id)
+      downloadBlob(response.data, `生物安全备案_${projectName}.docx`)
+      MessagePlugin.success('下载成功')
+    } catch (error) {
+      MessagePlugin.error('下载失败')
+    }
+  }
+
   const exportAllRecords = async (currentYear: number) => {
     exporting.value = true
     try {
-      const response = await filingAPI.exportArchive()
+      const response = await filingAPI.exportAll()
       let filename = `生物安全备案汇总_${currentYear}.zip`
       downloadBlob(response.data, filename)
       MessagePlugin.success('批量导出成功')
@@ -176,12 +211,17 @@ export const useFilingStore = defineStore('filing', () => {
     formData,
     submitting,
     exporting,
+    records,
+    loading,
     files,
     formatResponse,
     resetForm,
     addPerson,
     deletePerson,
-    submitAndDownload: onSubmit,
+    triggerSubmit,
     exportAllRecords,
+    handleDownloadError,
+    fetchRecords,
+    downloadRecordDoc,
   }
 })

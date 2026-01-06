@@ -4,14 +4,16 @@
       <div class="content-container">
         <app-header />
 
-        <router-view v-slot="{ Component }">
-          <transition name="slide-fade" mode="out-in">
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <div :style="isFilingForm ? 'padding-bottom: 60px' : ''">
+          <router-view v-slot="{ Component }">
+            <transition name="slide-fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </div>
       </div>
 
-      <div v-if="isfilingPage" class="anchor-sidebar">
+      <div v-if="isFilingForm" class="anchor-sidebar">
         <t-anchor :bounds="100" :target-offset="100">
           <t-anchor-item href="#section-basic" title="基本信息" />
           <t-anchor-item href="#section-personnel" title="准入人员" />
@@ -22,8 +24,6 @@
         </t-anchor>
       </div>
     </div>
-
-    <action-footer v-if="isfilingPage" />
   </div>
 </template>
 
@@ -31,11 +31,10 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '@/stores/app'
-import ActionFooter from '@/components/ActionFooter.vue'
 import AppHeader from '@/components/AppHeader.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
-
-const isfilingPage = computed(() => route.name === 'Home')
+// 路由名为 FilingCreate 时才是填报页
+const isFilingForm = computed(() => route.name === 'FilingCreate')
 </script>

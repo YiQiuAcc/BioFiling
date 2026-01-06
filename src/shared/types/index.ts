@@ -5,9 +5,9 @@ interface User {
   isAdmin?: boolean
 }
 
-interface AuthPayload {
-  netId: string
-  name: string
+interface LoginResponse {
+  token: string
+  user: User
 }
 
 declare global {
@@ -19,4 +19,4 @@ declare global {
   }
 }
 
-export type { User, AuthPayload }
+export type { User, LoginResponse }

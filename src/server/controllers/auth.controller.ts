@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import { validateCasTicket } from '@/utils/cas'
 import { generateToken } from '@/utils/jwt'
 import logger from '@/utils/logger'
+import { LoginResponse, User } from '@/types'
 
 // 读取管理员列表配置
 const ADMIN_IDS = process.env.ADMIN_IDS?.split(',') || []
@@ -45,7 +46,7 @@ export const validateTicket = async (
     const isAdmin = ADMIN_IDS.includes(netId)
 
     // 构建 Payload (将存入 Token 的数据)
-    const payload = {
+    const payload: User = {
       netId,
       name,
       isAdmin,
@@ -59,7 +60,7 @@ export const validateTicket = async (
     res.status(200).json({
       token,
       user: payload, // 前端 Pinia 会存储这个对象
-    })
+    } as LoginResponse)
   } catch (error) {
     logger.error(`[Auth] 登录异常: ${error}`)
     next(error)

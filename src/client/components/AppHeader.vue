@@ -23,9 +23,9 @@
 
         <t-switch
           size="large"
-          v-model="appStore.isDarkMode"
+          :value="appStore.isDarkMode"
           :label="['暗', '亮']"
-          @change="toggleTheme"
+          @change="appStore.toggleTheme()"
         >
           <template #label="{ value }">
             <moon-icon v-if="value" />
@@ -46,7 +46,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import { DownloadIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
-import { adminAPI } from '@/api'
+import { filingAPI } from '@/api'
 
 const currentYear = new Date().getFullYear()
 const appStore = useAppStore()
@@ -58,17 +58,12 @@ const authStore = useAuthStore()
 const currentUser = computed(() => authStore.currentUser)
 const isAdmin = computed(() => currentUser.value?.isAdmin)
 
-// 主题切换
-const toggleTheme = () => {
-  appStore.toggleTheme()
-}
-
 // 批量导出
 const handleBatchExport = async () => {
   if (!isAdmin.value) return
   exporting.value = true
   try {
-    const response = await adminAPI.exportAll()
+    const response = await filingAPI.exportAll()
 
     let filename = `生物安全备案汇总_${currentYear}.zip`
     const disposition = response.headers['content-disposition']

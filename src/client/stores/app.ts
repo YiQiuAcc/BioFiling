@@ -2,7 +2,6 @@ import { ref } from 'vue'
 import { defineStore } from 'pinia'
 
 export const useAppStore = defineStore('app', () => {
-  // 优先从 localStorage 读取
   const savedTheme = localStorage.getItem('theme-mode')
   const isDarkMode = ref(savedTheme === 'dark')
   const mode = ref(savedTheme ? `${savedTheme}-mode` : 'light-mode')
@@ -20,7 +19,6 @@ export const useAppStore = defineStore('app', () => {
         applyTheme('light')
       }
     } else {
-      // 有缓存，应用缓存
       applyTheme(isDarkMode.value ? 'dark' : 'light')
     }
   }

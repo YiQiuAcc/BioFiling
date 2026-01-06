@@ -3,7 +3,12 @@
     <t-card title="地点与时间" :bordered="false" header-bordered>
       <t-row :gutter="[24, 24]">
         <t-col :span="14" :md="14" :xs="24">
-          <t-form-item label="实验地点" name="locationDetail">
+          <t-form-item
+            label="实验地点"
+            name="locationDetail"
+            :status="errors.locationDetail ? 'error' : 'success'"
+            :tips="errors.locationDetail"
+          >
             <t-input-group style="width: 100%">
               <t-select
                 v-model="formData.locationType"
@@ -24,7 +29,12 @@
           </t-form-item>
         </t-col>
         <t-col :span="10" :md="10" :xs="24">
-          <t-form-item label="拟开展时间" name="dateRange">
+          <t-form-item
+            label="拟开展时间"
+            name="dateRange"
+            :status="errors.dateRange ? 'error' : 'success'"
+            :tips="errors.dateRange"
+          >
             <t-date-range-picker
               v-model="formData.dateRange"
               allow-input
@@ -40,8 +50,10 @@
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
+import { useFormErrors } from 'vee-validate'
 import { useFilingStore } from '@/stores/filing'
 
 const store = useFilingStore()
 const { formData } = storeToRefs(store)
+const errors = useFormErrors()
 </script>

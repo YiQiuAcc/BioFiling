@@ -1,10 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import FilingView from '@/views/FilingView.vue'
+import FilingFormView from '@/views/FilingFormView.vue'
+import HomeView from '@/views/HomeView.vue'
 import MainLayout from '@/layouts/MainLayout.vue'
-
-// 确保引入消息组件
 
 const routes = [
   {
@@ -13,13 +12,18 @@ const routes = [
     children: [
       {
         path: '',
-        name: 'Home',
-        component: FilingView,
+        name: 'Dashboard', // 首页
+        component: HomeView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'create', // 填报页
+        name: 'FilingCreate',
+        component: FilingFormView,
         meta: { requiresAuth: true },
       },
     ],
   },
-  // 建议添加一个不需要登录的 landing page 或错误页，防止死循环时的无处可去
 ]
 
 const router = createRouter({

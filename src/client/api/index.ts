@@ -1,29 +1,31 @@
-import axios from 'axios'
-import type { FormDataState, User } from '@/types'
+import axios, { type AxiosResponse } from 'axios'
+import type { FormDataState, LoginResponse, User } from '@/types'
 
-// 配置常量
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api'
-// 确保这个地址没有多余的斜杠
+interface FilingRecord {
+  leaderName: string | null
+  department: string | null
+  projectName: string
+  status: string
+  id: number
+  createdAt: Date
+}
+
+// === 配置常量 ===
+const API_BASE = import.meta.env.VITE_API_BASE || '/api'
 const CAS_SERVER_URL =
   import.meta.env.VITE_CAS_SERVER_URL || 'https://cas.example.edu.cn/authserver'
 const SERVICE_URL = window.location.origin
 
-// 根据后端返回的实际结构定义接口
-export interface LoginResponse {
-  token: string
-  user: User
-}
-
-// Axios 实例配置
+// === Axios 实例 ===
 const apiClient = axios.create({
   baseURL: API_BASE,
-  timeout: 30000,
+  timeout: 60000,
   headers: {
     'Content-Type': 'application/json',
   },
 })
 
-// 请求拦截器
+// === 请求拦截器 ===
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token')
@@ -35,43 +37,66 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error),
 )
 
-// 响应拦截器
+// === 响应拦截器 ===
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    // 处理 401 未授权
     if (error.response?.status === 401) {
-      // 不直接跳转，交给业务逻辑处理，或者只清除状态
       localStorage.removeItem('auth_token')
       localStorage.removeItem('user_info')
+      // 可触发全局事件让UI跳转
     }
     return Promise.reject(error)
   },
 )
 
-/**
- * 认证资源 (Auth Resource)
- */
+// === 通用下载处理 ===
+// 用于处理后端返回的 Blob 流（Word 或 Zip）
+export const downloadBlob = (response: AxiosResponse<Blob>) => {
+  const { data, headers } = response
+
+  // 尝试从 Content-Disposition 获取文件名
+  let filename = 'download.file'
+  const disposition = headers['content-disposition']
+  if (disposition) {
+    // 匹配 filename="xxx" 或 filename*=utf-8''xxx
+    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
+    const matches = filenameRegex.exec(disposition)
+    if (matches != null && matches[1]) {
+      filename = decodeURIComponent(
+        matches[1].replace(/['"]/g, '').replace("utf-8''", ''),
+      )
+    }
+  }
+
+  const url = window.URL.createObjectURL(new Blob([data]))
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+// === 认证 API ===
 export const authAPI = {
-  // CAS 登录重定向
   redirectToCasLogin: () => {
     const targetUrl = `${CAS_SERVER_URL}/login?service=${encodeURIComponent(SERVICE_URL)}`
     window.location.href = targetUrl
   },
 
-  // 验证 Ticket
-  // POST - /auth/cas/validate
+  // POST /api/auth/cas/validate
   validateTicket: (ticket: string) => {
     return apiClient.post<LoginResponse>('/auth/cas/validate', {
       ticket,
-      service: SERVICE_URL, // 确保这个 Service URL 和 redirectToCasLogin 中的完全一致
+      service: SERVICE_URL,
     })
   },
 
-  // 获取当前用户
+  // GET /api/auth/me
   getCurrentUser: () => apiClient.get<User>('/auth/me'),
 
-  // 登出
   logout: () => {
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_info')
@@ -79,32 +104,46 @@ export const authAPI = {
   },
 }
 
-/**
- * 备案记录资源 (Filing Resource)
- */
+// === 备案记录 API ===
 export const filingAPI = {
-  createAndDownload: (data: FormDataState) =>
-    apiClient.post('/filings', data, { responseType: 'blob' }),
+  /**
+   * 提交表单
+   * POST /api/filings/submit
+   */
+  submit: (data: FormDataState) => {
+    // 如果后端逻辑是"提交并直接下载Word"，须加 responseType: 'blob'
+    return apiClient.post('/filings/submit', data)
+  },
 
-  list: (params?: { page?: number; per_page?: number }) =>
-    apiClient.get('/filings', { params }),
+  /**
+   * 获取我的提交记录
+   * GET /api/filings/my
+   */
+  getMyRecords: () => apiClient.get<FilingRecord[]>('/filings/my'),
 
+  /**
+   * 删除记录
+   * DELETE /api/filings/:id
+   */
   delete: (recordId: number) => apiClient.delete(`/filings/${recordId}`),
 
-  exportArchive: () =>
-    apiClient.get('/filings/archive', { responseType: 'blob' }),
-}
-
-export const statsAPI = {
-  get: () => apiClient.get('/stats'),
-}
-
-export const systemAPI = {
-  health: () => apiClient.get('/health'),
-}
-
-export const adminAPI = {
-  exportAll: () => apiClient.get('/admin/export', { responseType: 'blob' }),
+  /**
+   * 导出所有记录 (管理员)
+   * GET /api/filings/exports
+   * 返回 ZIP 流
+   */
+  exportAll: () =>
+    apiClient.get('/filings/exports', {
+      responseType: 'blob',
+    }),
+  /**
+   * 下载单个备案生成的文档
+   * GET /api/filings/:id/download
+   */
+  downloadRecord: (id: number) =>
+    apiClient.get(`/filings/${id}/download`, {
+      responseType: 'blob',
+    }),
 }
 
 export default apiClient

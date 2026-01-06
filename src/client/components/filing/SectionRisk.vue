@@ -7,7 +7,12 @@
       </div>
       <t-row :gutter="[24, 24]">
         <t-col :span="8" :md="8" :xs="24">
-          <t-form-item label="动物名称" name="animalName">
+          <t-form-item
+            label="动物名称"
+            name="animalName"
+            :status="errors.animalName ? 'error' : 'success'"
+            :tips="errors.animalName"
+          >
             <t-input
               v-model="formData.animalName"
               placeholder="如：小鼠 (选填)"
@@ -41,7 +46,12 @@
       </div>
       <t-row :gutter="[24, 24]">
         <t-col :span="12" :md="12" :xs="24">
-          <t-form-item label="病原微生物名称" name="pathogenName">
+          <t-form-item
+            label="病原微生物名称"
+            name="pathogenName"
+            :status="errors.pathogenName ? 'error' : 'success'"
+            :tips="errors.pathogenName"
+          >
             <t-input v-model="formData.pathogenName" placeholder="标准名称" />
           </t-form-item>
         </t-col>
@@ -69,7 +79,12 @@
         </t-col>
 
         <t-col :span="24" :xs="24">
-          <t-form-item label="生物安全等级 (BSL)" name="bslLevel">
+          <t-form-item
+            label="生物安全等级 (BSL)"
+            name="bslLevel"
+            :status="errors.bslLevel ? 'error' : 'success'"
+            :tips="errors.bslLevel"
+          >
             <t-radio-group v-model="formData.bslLevel" class="bsl-group">
               <t-radio
                 v-for="level in BSL_LEVELS"
@@ -84,7 +99,12 @@
         </t-col>
 
         <t-col :span="24" :xs="24">
-          <t-form-item label="操作类型" name="operationTypes">
+          <t-form-item
+            label="操作类型"
+            name="operationTypes"
+            :status="errors.operationTypes ? 'error' : 'success'"
+            :tips="errors.operationTypes"
+          >
             <t-checkbox-group
               v-model="formData.operationTypes"
               :options="OPERATION_TYPES"
@@ -107,7 +127,7 @@
 
         <t-col :span="24" :xs="24">
           <t-form-item label="是否使用有毒/害物质" name="hasToxicSubstance">
-            <div class="expandable-section">
+            <div class="expandable-section" style="width: 100%">
               <div class="switch-row">
                 <t-switch
                   v-model="formData.hasToxicSubstance"
@@ -123,6 +143,8 @@
                   v-model="formData.toxicSubstanceDesc"
                   placeholder="请详细说明使用情况（感染、放射、化学毒等）"
                   class="mt-3"
+                  :status="errors.toxicSubstanceDesc ? 'error' : 'success'"
+                  :tips="errors.toxicSubstanceDesc"
                 />
               </transition>
             </div>
@@ -136,9 +158,11 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { IconFont } from 'tdesign-icons-vue-next'
+import { useFormErrors } from 'vee-validate'
 import { useFilingStore } from '@/stores/filing'
 import { ANIMAL_GRADES, BSL_LEVELS, OPERATION_TYPES } from '@/constants'
 
 const store = useFilingStore()
 const { formData } = storeToRefs(store)
+const errors = useFormErrors()
 </script>

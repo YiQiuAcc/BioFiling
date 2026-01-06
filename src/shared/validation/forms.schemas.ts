@@ -47,14 +47,4 @@ interface FormDataState {
   publicInfoDesc: string
 }
 
-interface Opinion {
-  leaderOpinion: string
-  leaderOpinionDate: string
-  unitOpinion: string
-  unitOpinionDate: string
-  numberOfReviewsRemark: number
-  filingTime: string
-  filingNumber: string
-}
-
-export type { Personnel, FormDataState, Opinion }
+export type { Personnel, FormDataState }

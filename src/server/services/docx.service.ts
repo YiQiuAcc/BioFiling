@@ -1,5 +1,5 @@
 import archiver from 'archiver'
-import createReport from 'docx-templates'
+import { createReport } from 'docx-templates'
 import fs from 'fs'
 import path from 'path'
 import logger from '@/utils/logger'
@@ -48,11 +48,7 @@ const processDataForTemplate = (data: any) => {
 export const docxService = {
   // 单文件生成 (用于单个下载/预览)
   async generateBuffer(data: any) {
-    const templatePath = path.resolve(
-      process.cwd(),
-      'templates',
-      'safety_form_template.docx',
-    )
+    const templatePath = path.resolve(process.cwd(), 'template.docx')
     const template = fs.readFileSync(templatePath)
     const processedData = processDataForTemplate(data)
 
@@ -75,7 +71,7 @@ export const docxService = {
       zlib: { level: 9 }, // 最高压缩级别
     })
 
-    const templatePath = path.resolve(process.cwd(), 'templates')
+    const templatePath = path.resolve(process.cwd(), 'template.docx') // 修复：路径应为单数形式 template.docx
     if (!fs.existsSync(templatePath)) throw new Error('模板文件不存在')
     const template = fs.readFileSync(templatePath)
 
