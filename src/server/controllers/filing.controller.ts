@@ -1,9 +1,9 @@
-import { ZodError } from 'zod'
+import { ZodError, ZodIssue } from 'zod'
 import { Request, Response } from 'express'
 import logger from '@/utils/logger'
-import { formDataSchema } from '@/types/index'
 import { docxService } from '@/services/docx.service'
 import { filingService } from '@/services/filing.service'
+import { ApiResponse, FilingRecord, FormDataState, formDataSchema } from '@/types'
 
 /**
  * 提交表单 (仅保存)
@@ -14,7 +14,7 @@ export const submit = async (req: Request, res: Response) => {
     const user = req.user!
     const formData = req.body
     if (!formData || Object.keys(formData).length === 0) {
-      res.status(400).json({ message: '提交数据不能为空' })
+      res.status(400).json({ message: '提交数据不能为空' } as ApiResponse)
       return
     }
 
@@ -32,21 +32,21 @@ export const submit = async (req: Request, res: Response) => {
     // 返回标准化的成功响应
     res.status(200).json({
       message: '提交成功',
-      data: { id: record.id },
-    })
+      data: record.id,
+    } as ApiResponse<number>)
   } catch (e) {
     logger.error('Submit Error:', e)
     // 如果是Zod验证错误，返回400状态码
     if (e instanceof ZodError) {
       res.status(400).json({
         message: '提交数据验证失败',
-        error: e.errors,
-      })
+        data: e.errors,
+      } as ApiResponse<ZodIssue[]>)
     } else {
       res.status(500).json({
         message: '提交失败',
-        error: e instanceof Error ? e.message : String(e),
-      })
+        data: e instanceof Error ? e.message : String(e),
+      } as ApiResponse<string>)
     }
   }
 }
@@ -61,27 +61,27 @@ export const downloadRecord = async (req: Request, res: Response) => {
     const user = req.user!
 
     if (isNaN(id)) {
-      res.status(400).json({ message: '无效的 ID' })
+      res.status(400).json({ message: '无效的 ID' } as ApiResponse)
       return
     }
 
     // 获取记录
     const record = await filingService.getRecordById(id)
     if (!record) {
-      res.status(404).json({ message: '记录不存在' })
+      res.status(404).json({ message: '记录不存在' } as ApiResponse)
       return
     }
 
     // 权限校验 (仅管理员或本人可下载)
     if (!user.isAdmin && record.submitterId !== user.netId) {
-      res.status(403).json({ message: '无权下载此记录' })
+      res.status(403).json({ message: '无权下载此记录' } as ApiResponse)
       return
     }
 
     // 准备渲染数据
     const formData = record.content as Record<string, any>
     const renderData = {
-      ...formData, // 展开存储的表单数据
+      ...(formData as FormDataState), // 展开存储的表单数据
 
       // 注入系统生成的字段
       systemId: String(record.id).padStart(6, '0'),
@@ -112,7 +112,7 @@ export const downloadRecord = async (req: Request, res: Response) => {
     res.send(buffer)
   } catch (e) {
     logger.error(`Download Error (ID: ${req.params.id}):`, e)
-    res.status(500).json({ message: '文档生成失败' })
+    res.status(500).json({ message: '文档生成失败' } as ApiResponse)
   }
 }
 
@@ -123,13 +123,12 @@ export const downloadRecord = async (req: Request, res: Response) => {
 export const getMyRecords = async (req: Request, res: Response) => {
   try {
     const records = await filingService.getUserRecords(req.user!.netId)
-    res.status(200).json({
-      message: '获取记录成功',
-      data: records,
-    })
+    res.status(200).json({ message: '获取成功', data: records } as ApiResponse<
+      FilingRecord[]
+    >)
   } catch (e) {
     logger.error('Get Records Error:', e)
-    res.status(500).json({ message: '获取记录失败' })
+    res.status(500).json({ message: '获取记录失败' } as ApiResponse)
   }
 }
 
@@ -141,7 +140,7 @@ export const deleteRecord = async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id)
     if (isNaN(id)) {
-      res.status(400).json({ message: '无效的 ID' })
+      res.status(400).json({ message: '无效的 ID' } as ApiResponse)
       return
     }
 
@@ -151,14 +150,14 @@ export const deleteRecord = async (req: Request, res: Response) => {
       req.user!.isAdmin || false,
     )
 
-    res.status(200).json({ message: '删除成功' })
+    res.status(200).json({ message: '删除成功' } as ApiResponse)
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e)
     if (msg.includes('无权') || msg.includes('不存在')) {
-      res.status(403).json({ message: msg })
+      res.status(403).json({ message: msg } as ApiResponse)
     } else {
       logger.error('Delete Error:', e)
-      res.status(500).json({ message: '服务器内部错误' })
+      res.status(500).json({ message: '服务器内部错误' } as ApiResponse)
     }
   }
 }

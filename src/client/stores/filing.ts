@@ -8,7 +8,7 @@ import {
 import { cloneDeep } from 'lodash-es'
 import { filingAPI } from '@/api/index'
 import router from '@/router/router'
-import { type FormDataState } from '@/types/index'
+import { type FormDataState, type ImageUploadResponse } from '@/types'
 
 export const useFilingStore = defineStore('filing', () => {
   const submitting = ref(false)
@@ -64,13 +64,13 @@ export const useFilingStore = defineStore('filing', () => {
     certifyExplanation: '',
     certifyImagesPath: [],
   })
-  const formatResponse: UploadProps['formatResponse'] = (response: any) => {
+  const formatResponse: UploadProps['formatResponse'] = (response: ImageUploadResponse) => {
     // response 是后端返回的完整 JSON 对象
     if (response.code === 0) {
       return {
-        status: 'success', // 组件内部状态
-        url: response.data.url, // 必须：用于组件内显示缩略图
-        response: response.data, // 将后端数据透传，方便后续提交表单时获取 dbPath
+        status: 'success',        // 组件内部状态
+        url: response.data!.url,   // 用于组件内显示缩略图
+        response: response.data,  // 将后端数据透传，方便后续提交表单时获取 dbPath
       }
     }
     return { status: 'fail', error: response.message }
@@ -87,40 +87,10 @@ export const useFilingStore = defineStore('filing', () => {
   }
   // 初始化数据
   const formData = reactive<FormDataState>(getDefaultFormData())
-  const addPerson = () => {
-    formData.personnel.push({
-      key: crypto.randomUUID(),
-      department: '',
-      name: '',
-      id: '',
-      phone: '',
-      content: '',
-    })
-  }
-
-  const deletePerson = (index: number) => {
-    // 至少保留一行
-    if (formData.personnel.length > 1) {
-      formData.personnel.splice(index, 1)
-    } else {
-      MessagePlugin.warning('至少需要保留一名人员信息')
-    }
-  }
-
   // 提交逻辑
   const triggerSubmit = async () => {
     submitting.value = true
     try {
-      if (files.value && files.value.length > 0) {
-        files.value.forEach((file) => {
-          if (file.response?.dbPath) {
-            if (!formData.certifyImagesPath.includes(file.response.dbPath)) {
-              formData.certifyImagesPath.push(file.response.dbPath)
-            }
-          }
-        })
-      }
-
       const payload = cloneDeep(formData)
       await filingAPI.submit(payload)
       MessagePlugin.success('备案提交成功')
@@ -143,12 +113,30 @@ export const useFilingStore = defineStore('filing', () => {
     loading.value = true
     try {
       const res = await filingAPI.getMyRecords()
-      records.value = res.data
+      // 将响应数据类型转换为 any 以处理可能的包装格式
+      const responseData = res.data as any
+      // 如果是直接数组格式则直接使用，否则尝试从 data 属性获取
+      if (Array.isArray(responseData)) {
+        records.value = responseData
+      } else {
+        records.value = []
+      }
     } catch (error) {
       console.error(error)
       MessagePlugin.error('获取备案记录失败')
     } finally {
       loading.value = false
+    }
+  }
+
+  // === 删除记录 ===
+  const deleteRecord = async (id: number) => {
+    try {
+      await filingAPI.delete(id)
+      MessagePlugin.success('删除成功')
+      fetchRecords()
+    } catch (error) {
+      MessagePlugin.error('删除失败')
     }
   }
 
@@ -206,7 +194,23 @@ export const useFilingStore = defineStore('filing', () => {
       MessagePlugin.error('网络请求失败')
     }
   }
+  const syncFilesToFormData = () => {
+    // 清空旧数据，避免重复 push
+    const paths: string[] = []
 
+    if (files.value && files.value.length > 0) {
+      files.value.forEach((file) => {
+        // 注意：根据你的 upload.controller.ts，后端返回结构在 file.response.dbPath
+        // 如果是 TDesign 的 formatResponse 包装过，可能层级要注意
+        if (file.response?.dbPath) {
+          paths.push(file.response.dbPath)
+        }
+      })
+    }
+
+    // 更新 formData
+    formData.certifyImagesPath = paths
+  }
   return {
     formData,
     submitting,
@@ -214,10 +218,10 @@ export const useFilingStore = defineStore('filing', () => {
     records,
     loading,
     files,
+    deleteRecord,
+    syncFilesToFormData,
     formatResponse,
     resetForm,
-    addPerson,
-    deletePerson,
     triggerSubmit,
     exportAllRecords,
     handleDownloadError,

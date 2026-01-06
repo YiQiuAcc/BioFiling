@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import path from 'path'
+import { ImageUploadResponse } from '@/types'
 
 // 路由处理函数
 export const uploadHandler = (req: Request, res: Response) => {
@@ -23,16 +24,15 @@ export const uploadHandler = (req: Request, res: Response) => {
   const fileUrl = `/uploads/${normalizedPath}`
 
   // 返回给前端
-  // TDesign 默认期待 status: 'success'，但也支持自定义 formatResponse
-  res.json({
+  res.status(200).json({
     code: 0,
     message: '上传成功',
     data: {
-      url: fileUrl, // 前端展示用的完整 URL
+      url: fileUrl,           // 前端展示用的完整 URL
       dbPath: normalizedPath, // 建议存入数据库的相对路径
       originalName: file.originalname,
       size: file.size,
       mimetype: file.mimetype,
     },
-  })
+  } as ImageUploadResponse)
 }

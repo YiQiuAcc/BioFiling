@@ -2,16 +2,17 @@ import { Request, Response } from 'express'
 import logger from '@/utils/logger'
 import { docxService } from '@/services/docx.service'
 import { filingService } from '@/services/filing.service'
+import { ApiResponse } from '@/types'
 
 export const exportAllSubmissions = async (req: Request, res: Response) => {
   try {
     if (!req.user?.isAdmin) {
-      res.status(403).json({ message: '无权操作' })
+      res.status(403).json({ message: '无权操作' }as ApiResponse)
       return
     }
     const records = await filingService.getAllRecords()
     if (!records || records.length === 0) {
-      res.status(404).json({ message: '暂无记录可导出' })
+      res.status(404).json({ message: '暂无记录可导出' }as ApiResponse)
       return
     }
     const ids = records.map((r) => r.id)
@@ -25,7 +26,7 @@ export const exportAllSubmissions = async (req: Request, res: Response) => {
     archive.on('error', (err: any) => {
       logger.error('Archive error:', err)
       if (!res.headersSent) {
-        res.status(500).json({ message: '压缩文件生成失败' })
+        res.status(500).json({ message: '压缩文件生成失败' }as ApiResponse)
       } else {
         res.end()
       }
@@ -35,7 +36,7 @@ export const exportAllSubmissions = async (req: Request, res: Response) => {
   } catch (e) {
     logger.error('Export Controller Error:', e)
     if (!res.headersSent) {
-      res.status(500).json({ message: '导出请求失败' })
+      res.status(500).json({ message: '导出请求失败' }as ApiResponse)
     }
   }
 }

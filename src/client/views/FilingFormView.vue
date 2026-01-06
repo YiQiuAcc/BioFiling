@@ -8,15 +8,18 @@
     </t-alert>
 
     <t-form label-align="top" class="main-form" scroll-to-first-error="smooth">
-      <section-basic />
-      <section-personnel />
-      <section-risk />
-      <section-location />
-      <section-content />
-      <section-files />
+      <section-basic class="section-basic" />
+      <section-personnel class="section-personnel" />
+      <section-risk class="section-risk" />
+      <section-location class="section-location" />
+      <section-content class="section-content" />
+      <section-files class="section-files" />
     </t-form>
 
-    <action-footer @submit="handleFormSubmit" @reset="handleFormReset" />
+
+    <Teleport to="body">
+      <action-footer @submit="handleFormSubmit" @reset="handleFormReset" />
+    </Teleport>
   </div>
 </template>
 
@@ -52,10 +55,10 @@ const {
 
 // === 处理提交 ===
 const handleFormSubmit = async () => {
-  // 将 Pinia 的最新数据同步给 VeeValidate
   // 提交前强制同步一次值。
+  filingStore.syncFilesToFormData()
+  // 将 Pinia 的最新数据同步给 VeeValidate
   setValues(formData.value)
-
   // 触发验证
   const result = await validate()
 
@@ -81,20 +84,39 @@ const handleFormReset = () => {
 const scrollToFirstError = (errors: Record<string, string>) => {
   const firstErrorKey = Object.keys(errors)[0]
   if (firstErrorKey) {
-    // 处理数组字段的特殊 key，例如 personnel[0].name -> name="personnel[0].name"
-    // 或者寻找最近的包含该 name 的容器
+    // 根据错误字段名称确定对应的部分
+    let sectionSelector = ''
+
+    if (firstErrorKey.startsWith('basicInfo')) {
+      sectionSelector = '.section-basic'
+    } else if (firstErrorKey.startsWith('personnel')) {
+      sectionSelector = '.section-personnel'
+    } else if (firstErrorKey.startsWith('riskAssessment')) {
+      sectionSelector = '.section-risk'
+    } else if (firstErrorKey.startsWith('location')) {
+      sectionSelector = '.section-location'
+    } else if (firstErrorKey.startsWith('content')) {
+      sectionSelector = '.section-content'
+    } else if (firstErrorKey.startsWith('files')) {
+      sectionSelector = '.section-files'
+    }
+
+    // 如果找到了对应的区域，就滚动到该区域
+    if (sectionSelector) {
+      const sectionEl = document.querySelector(sectionSelector)
+      if (sectionEl) {
+        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        return
+      }
+    }
+
+    // 如果没有找到特定区域，尝试直接定位到错误元素
     let selector = `[name="${firstErrorKey}"]`
-
-    // if (firstErrorKey.includes('[')) {
-    //   const fieldName = firstErrorKey.split('[')[0] // personnel
-    //   selector = `[name^="${fieldName}"]`
-    // }
-
     const el = document.querySelector(selector)
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' })
     } else {
-      // 如果找不到具体的 input，尝试滚动到顶部作为兜底
+      // 如果找不到具体的元素，滚动到顶部作为兜底
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }

@@ -4,24 +4,40 @@ import fs from 'fs'
 import path from 'path'
 import logger from '@/utils/logger'
 import { prisma } from '@/utils/prisma'
+import { FormDataState, Personnel } from '@/types'
+import { DocxRenderData, DocxTemplateImage } from '@/types'
 
-// 通用图片读取
-const getImageDataFromPath = (urlPath: string) => {
+// 常量定义
+const TEMPLATE_FILENAME = 'template.docx'
+const IMAGE_DEFAULT_WIDTH = 6
+const IMAGE_DEFAULT_HEIGHT = 4
+
+/**
+ * 读取图片并转换为 docx-templates 需要的对象格式
+ */
+const getImageDataFromPath = (urlPath: string): DocxTemplateImage | null => {
+  if (!urlPath) return null
+
   try {
-    if (!urlPath) return null
-
-    // 移除开头的 /
-    const relativePath = urlPath.replace(/^\//, '')
+    // 安全路径解析
+    const relativePath = urlPath.replace(/^[\/\\]/, '') // 移除开头的 / 或 \
     const absolutePath = path.resolve(process.cwd(), relativePath)
 
+    // 确保读取的文件必须在 uploads 目录下
+    if (!absolutePath.startsWith(path.resolve(process.cwd(), 'uploads'))) {
+      logger.warn(`尝试读取非法目录文件: ${absolutePath}`)
+      return null
+    }
+
     if (fs.existsSync(absolutePath)) {
-      const ext = path.extname(absolutePath).substring(1)
+      const ext = path.extname(absolutePath).substring(1).toLowerCase()
       const buffer = fs.readFileSync(absolutePath)
+
       return {
-        width: 6,
-        height: 4,
+        width: IMAGE_DEFAULT_WIDTH,
+        height: IMAGE_DEFAULT_HEIGHT,
         data: buffer,
-        extension: ext,
+        extension: ext === 'jpg' ? 'jpeg' : ext, // 规范化扩展名
       }
     }
   } catch (e) {
@@ -30,103 +46,149 @@ const getImageDataFromPath = (urlPath: string) => {
   return null
 }
 
-// 将路径转为 Word 图片对象
-const processDataForTemplate = (data: any) => {
-  const processed = { ...data }
-  // 显式处理 certifyImagesPath
+/**
+ * 数据预处理：将数据库的一维数据转换为模板需要的渲染数据
+ * 主要处理：图片路径 -> 图片对象
+ */
+const processDataForTemplate = (
+  data: FormDataState | (FormDataState & Record<string, unknown>),
+): DocxRenderData => {
+  // 浅拷贝避免污染源对象
+  // 使用 unknown 强转是为了兼容 Record<string, any> 但保持内部类型安全
+  const processed = { ...data } as unknown as DocxRenderData
+
+  // 处理图片字段
   if (
-    processed.certifyImagesPath &&
-    Array.isArray(processed.certifyImagesPath)
+    'certifyImagesPath' in data &&
+    Array.isArray(data.certifyImagesPath) &&
+    data.certifyImagesPath.length > 0
   ) {
-    processed.certifyImagesPath = processed.certifyImagesPath
-      .map((p: string) => getImageDataFromPath(p))
-      .filter(Boolean) // 移除读取失败的 null
+    // 显式类型断言，确保 map 返回的是 DocxTemplateImage[]
+    processed.certifyImagesPath = data.certifyImagesPath
+      .map((p) => getImageDataFromPath(p))
+      .filter((img): img is DocxTemplateImage => img !== null) // Type Guard 过滤 null
+  } else {
+    processed.certifyImagesPath = []
   }
+
   return processed
 }
 
 export const docxService = {
-  // 单文件生成 (用于单个下载/预览)
-  async generateBuffer(data: any) {
-    const templatePath = path.resolve(process.cwd(), 'template.docx')
+  /**
+   * 单文件生成 (用于单个下载/预览)
+   */
+  async generateBuffer(data: FormDataState): Promise<Buffer> {
+    const templatePath = path.resolve(process.cwd(), TEMPLATE_FILENAME)
+
+    if (!fs.existsSync(templatePath)) {
+      throw new Error('Word 模板文件不存在')
+    }
+
     const template = fs.readFileSync(templatePath)
     const processedData = processDataForTemplate(data)
 
     const buffer = await createReport({
       template,
       data: processedData,
-      cmdDelimiter: ['+++', '+++'],
-      failFast: false,
+      cmdDelimiter: ['+++', '+++'], // 保持与你原有逻辑一致
+      failFast: true, // 单文件生成建议开启 failFast，有问题直接报错
+      noSandbox: true, // 性能优化：在 Node 环境如果不涉及非信模板，可关闭沙箱
     })
+
     return Buffer.from(buffer)
   },
 
   /**
-   * 创建流式 ZIP (使用 Archiver)
-   * 内存占用低，不会一次性把所有文件加载到 RAM
+   * 创建流式 ZIP
+   * 优化点：批量查询数据库，减少 await 循环中的 IO 等待
    */
-  async createZipStream(recordIds: number[]) {
+  async createZipStream(recordIds: number[]): Promise<archiver.Archiver> {
     // 创建 archiver 实例
     const archive = archiver('zip', {
-      zlib: { level: 9 }, // 最高压缩级别
+      zlib: { level: 9 },
     })
 
-    const templatePath = path.resolve(process.cwd(), 'template.docx') // 修复：路径应为单数形式 template.docx
-    if (!fs.existsSync(templatePath)) throw new Error('模板文件不存在')
+    const templatePath = path.resolve(process.cwd(), TEMPLATE_FILENAME)
+    if (!fs.existsSync(templatePath)) {
+      // 这里抛出错误，Controller 层可以在流开始前捕获
+      throw new Error('模板文件不存在')
+    }
     const template = fs.readFileSync(templatePath)
 
-    // 异步处理逻辑：一边生成 Word，一边推送到 ZIP 流中
-    // 这里不 await 整个循环，而是立即返回 archive 对象供 Controller 使用
-    // 具体的生成逻辑在后台执行
+    // 后台异步处理
     ;(async () => {
-      for (const id of recordIds) {
-        try {
-          const record = await prisma.forms.findUnique({ where: { id } })
-          if (!record || !record.content) continue
+      try {
+        // 批量查询, 如果 id 数量极大（如几千个），这里可能需要分批 (chunk) 查询
+        const records = await prisma.forms.findMany({
+          where: {
+            id: { in: recordIds },
+          },
+        })
 
-          const formData = record.content as Record<string, any>
-
-          // 注入系统数据
-          const renderData = {
-            ...formData,
-            systemId: String(record.id).padStart(6, '0'),
-            submitDate: record.createdAt.toLocaleDateString('zh-CN'),
-            submitterName: record.submitterName,
-          }
-
-          const finalData = processDataForTemplate(renderData)
-
-          // 生成 Word Buffer
-          const wordBuffer = await createReport({
-            template,
-            data: finalData,
-            cmdDelimiter: ['+++', '+++'],
-            failFast: false,
-          })
-
-          // 文件名处理 (去除非法字符)
-          const safeName = (record.projectName || '未命名').replace(
-            /[\\/:*?"<>|]/g,
-            '_',
-          )
-          const fileName = `${String(record.id).padStart(4, '0')}_${safeName}.docx`
-
-          // 添加到 ZIP 流
-          archive.append(Buffer.from(wordBuffer), { name: fileName })
-        } catch (error) {
-          logger.error(`ID ${id} 生成失败`, error)
-          // 即使出错，也往 ZIP 里放个错误日志，而不是中断整个下载
-          archive.append(Buffer.from(`Error generating file: ${error}`), {
-            name: `ERROR_${id}.txt`,
-          })
+        if (records.length === 0) {
+          archive.append('No records found.', { name: 'README.txt' })
         }
+
+        // 如果对顺序无要求，可以使用 Promise.all 进行并发生成，速度更快
+        // 但为了控制内存峰值，依然保持串行，或使用 p-limit 控制并发数
+        for (const record of records) {
+          try {
+            if (!record.content) continue
+
+            // 强类型转换,数据库里的 content 符合 FormDataState 结构
+            const formData = record.content as unknown as FormDataState
+
+            // 注入系统数据
+            const renderData: FormDataState &
+              Record<
+                string,
+                string | string[]  | number | Personnel[]| boolean
+              > = {
+              ...formData,
+              systemId: String(record.id).padStart(6, '0'),
+              submitDate: record.createdAt.toLocaleDateString('zh-CN'),
+              submitterName: record.submitterName || '',
+            }
+
+            const finalData = processDataForTemplate(renderData)
+
+            // 生成 Word Buffer
+            const wordBuffer = await createReport({
+              template,
+              data: finalData,
+              cmdDelimiter: ['+++', '+++'],
+              failFast: false, // 批量导出时，某个字段渲染失败不应中断整个流程
+            })
+
+            // 文件名安全处理
+            const safeProjectName = (record.projectName || '未命名')
+              .replace(/[\\/:*?"<>|]/g, '_')
+              .replace(/\s+/g, '') // 去除空格
+
+            const fileName = `${String(record.id).padStart(4, '0')}_${safeProjectName}.docx`
+
+            archive.append(Buffer.from(wordBuffer), { name: fileName })
+          } catch (itemError) {
+            logger.error(`ID ${record.id} 生成失败`, itemError)
+            archive.append(
+              Buffer.from(
+                `Error generating file for ID ${record.id}: ${String(itemError)}`,
+              ),
+              { name: `ERROR_${record.id}.txt` },
+            )
+          }
+        }
+      } catch (dbError) {
+        logger.error('ZIP 生成过程数据库错误', dbError)
+        archive.append(Buffer.from(`Database Error: ${String(dbError)}`), {
+          name: 'SYSTEM_ERROR.txt',
+        })
+      } finally {
+        archive.finalize()
       }
-      // 所有数据处理完毕，关闭流
-      archive.finalize()
-    })().catch((err) => {
-      logger.error('ZIP 生成过程严重错误', err)
-      archive.abort()
-    })
+    })() // IIFE 立即执行
+
     return archive
   },
 }

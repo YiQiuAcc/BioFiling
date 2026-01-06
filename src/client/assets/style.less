@@ -317,14 +317,14 @@ body {
     max-width: 1200px;
     margin: 0 auto;
     display: flex;
-    justify-content: space-between;
+    /* justify-content: space-between;*/
     align-items: center;
   }
 
   .action-buttons {
     display: flex;
     gap: 16px;
-
+    margin-left: auto;
     button {
       min-width: 120px;
     }
@@ -399,7 +399,6 @@ body {
     }
   }
 
-  /* 底部操作栏移动端重构 */
   .bottom-action-bar {
     .action-content {
       flex-direction: column;
@@ -410,19 +409,21 @@ body {
     .action-info {
       text-align: center;
       font-size: 12px;
-      order: 2; /* 信息放下面 */
+      order: 2;
     }
 
     .action-buttons {
-      order: 1; /* 按钮放上面 */
+      order: 1;
       gap: 12px;
+      margin-left: 0;
+      // 水平居中
+      justify-content: center;
 
       button {
-        flex: 1; /* 按钮均分宽度 */
+        flex: 1;
         min-width: 0;
       }
 
-      /* 让提交按钮更醒目 */
       .btn-submit {
         flex: 2; /* 提交按钮更宽 */
       }
@@ -446,15 +447,12 @@ body {
 
 .slide-fade-enter-active,
 .slide-fade-leave-active {
-  transition: all 0.3s ease;
-  max-height: 200px;
-  overflow: hidden;
+  transition: all 0.3s ease-out;
   opacity: 1;
 }
 
 .slide-fade-enter-from,
 .slide-fade-leave-to {
   opacity: 0;
-  max-height: 0;
   transform: translateY(-8px);
 }

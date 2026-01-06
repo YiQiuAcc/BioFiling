@@ -32,6 +32,7 @@ declare module 'vue' {
     TLink: typeof import('tdesign-vue-next')['Link']
     TLoading: typeof import('tdesign-vue-next')['Loading']
     TOption: typeof import('tdesign-vue-next')['Option']
+    TPopconfirm: typeof import('tdesign-vue-next')['Popconfirm']
     TRadio: typeof import('tdesign-vue-next')['Radio']
     TRadioButton: typeof import('tdesign-vue-next')['RadioButton']
     TRadioGroup: typeof import('tdesign-vue-next')['RadioGroup']

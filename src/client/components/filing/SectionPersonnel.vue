@@ -90,6 +90,7 @@ import { storeToRefs } from 'pinia'
 import { AddIcon, DeleteIcon } from 'tdesign-icons-vue-next'
 import { useFormErrors } from 'vee-validate'
 import { useFilingStore } from '@/stores/filing'
+import { MessagePlugin } from 'tdesign-vue-next'
 
 const store = useFilingStore()
 const { formData } = storeToRefs(store)
@@ -123,6 +124,8 @@ const handleAddPerson = () => {
 const handleDeletePerson = (index: number) => {
   if (formData.value.personnel.length > 1) {
     formData.value.personnel.splice(index, 1)
-  }
+  }else {
+      MessagePlugin.warning('至少需要保留一名人员信息')
+    }
 }
 </script>

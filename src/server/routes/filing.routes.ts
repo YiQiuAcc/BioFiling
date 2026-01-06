@@ -3,9 +3,8 @@ import { exportAllSubmissions } from '@/controllers/docx.controller'
 import {
   deleteRecord,
   downloadRecord,
-  // [新增]
   getMyRecords,
-  submit, // [重命名]
+  submit,
 } from '@/controllers/filing.controller'
 
 const router = Router()

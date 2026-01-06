@@ -46,7 +46,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import { DownloadIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
-import { filingAPI } from '@/api'
+import { filingAPI,downloadBlob } from '@/api'
 
 const currentYear = new Date().getFullYear()
 const appStore = useAppStore()
@@ -78,17 +78,5 @@ const handleBatchExport = async () => {
   } finally {
     exporting.value = false
   }
-}
-
-// 下载 Blob
-const downloadBlob = (blob: Blob, filename: string) => {
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.setAttribute('download', filename)
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
 }
 </script>

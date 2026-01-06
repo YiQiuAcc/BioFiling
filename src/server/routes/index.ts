@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { authenticate } from '@/utils/jwt'
+import { ApiResponse } from '@/types'
 import authRoutes from './auth.routes'
 import docxRoutes from './filing.routes'
 import uploadRoutes from './upload.routes'
@@ -8,7 +9,7 @@ const router = Router()
 
 // 健康检查
 router.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date() })
+  res.json({ message: 'ok', timestamp: new Date() } as ApiResponse<Date>)
 })
 
 // 认证路由 (CAS & Current User)
@@ -16,7 +17,6 @@ router.get('/health', (_req, res) => {
 router.use('/auth', authRoutes)
 
 // 业务路由 (受保护)
-// 挂载 filing 相关功能
 router.use('/filings', authenticate, docxRoutes)
 
 router.use('/upload', authenticate, uploadRoutes)

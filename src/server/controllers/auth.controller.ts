@@ -2,7 +2,7 @@ import { NextFunction, Request, Response } from 'express'
 import { validateCasTicket } from '@/utils/cas'
 import { generateToken } from '@/utils/jwt'
 import logger from '@/utils/logger'
-import { LoginResponse, User } from '@/types'
+import { ApiResponse, LoginResponse, User } from '@/types'
 
 // 读取管理员列表配置
 const ADMIN_IDS = process.env.ADMIN_IDS?.split(',') || []
@@ -20,7 +20,9 @@ export const validateTicket = async (
     const { ticket, service } = req.body
 
     if (!ticket || !service) {
-      res.status(400).json({ message: '缺少 ticket 或 service 参数' })
+      res
+        .status(400)
+        .json({ message: '缺少 ticket 或 service 参数' } as ApiResponse)
       return
     }
 
@@ -31,7 +33,7 @@ export const validateTicket = async (
       logger.warn(`[Auth] CAS 验证失败: ${casResult.message}`)
       res.status(401).json({
         message: casResult.message || '身份认证失效，请重新登录',
-      })
+      } as ApiResponse)
       return
     }
 
@@ -58,11 +60,15 @@ export const validateTicket = async (
     logger.info(`[Auth] 用户登录成功: ${name} (${netId})`)
 
     res.status(200).json({
-      token,
-      user: payload, // 前端 Pinia 会存储这个对象
-    } as LoginResponse)
+      message: '登录成功',
+      data: {
+        token,
+        user: payload, // 前端 Pinia 会存储这个对象
+      },
+    } as ApiResponse<LoginResponse>)
   } catch (error) {
     logger.error(`[Auth] 登录异常: ${error}`)
+    res.status(500).json({ message: '登录失败' } as ApiResponse)
     next(error)
   }
 }
@@ -74,9 +80,11 @@ export const validateTicket = async (
 export const getCurrentUser = (req: Request, res: Response) => {
   // req.user 由 authenticate 中间件注入
   if (!req.user) {
-    res.status(401).json({ message: 'Token 无效或已过期' })
+    res.status(401).json({ message: 'Token 无效或已过期' } as ApiResponse)
     return
   }
 
-  res.status(200).json(req.user)
+  res
+    .status(200)
+    .json({ message: '获取成功', data: req.user } as ApiResponse<User>)
 }
