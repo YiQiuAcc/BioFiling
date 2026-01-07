@@ -46,7 +46,7 @@ import { MessagePlugin } from 'tdesign-vue-next'
 import { DownloadIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
-import { filingAPI,downloadBlob } from '@/api'
+import { downloadBlob, filingAPI } from '@/api'
 
 const currentYear = new Date().getFullYear()
 const appStore = useAppStore()
@@ -73,7 +73,8 @@ const handleBatchExport = async () => {
 
     downloadBlob(response.data, filename)
     MessagePlugin.success('批量导出成功')
-  } catch (error: any) {
+  } catch (error) {
+    console.error(error)
     MessagePlugin.error('导出失败，请检查权限')
   } finally {
     exporting.value = false

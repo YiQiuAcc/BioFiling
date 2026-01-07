@@ -2,6 +2,7 @@ import axios from 'axios'
 import { parseStringPromise } from 'xml2js'
 import logger from './logger'
 
+/* eslint-disable */
 // 使用环境变量，默认为示例 CAS 地址
 const CAS_SERVER_URL = process.env.CAS_SERVER_URL || 'https://cas.example.edu.cn'
 const CAS_VALIDATE_PATH = '/authserver/serviceValidate'

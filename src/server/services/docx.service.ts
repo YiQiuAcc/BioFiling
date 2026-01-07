@@ -143,7 +143,7 @@ export const docxService = {
             const renderData: FormDataState &
               Record<
                 string,
-                string | string[]  | number | Personnel[]| boolean
+                string | string[] | number | Personnel[] | boolean
               > = {
               ...formData,
               systemId: String(record.id).padStart(6, '0'),

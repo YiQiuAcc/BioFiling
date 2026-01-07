@@ -1,6 +1,12 @@
 import axios, { type AxiosResponse } from 'axios'
-import { type ApiResponse, type FilingRecord, type FormDataState, type LoginResponse, type User } from '@/types'
 import type { ZodIssue } from 'zod'
+import type {
+  ApiResponse,
+  FilingRecord,
+  FormDataState,
+  LoginResponse,
+  User,
+} from '@/types'
 
 // === 配置常量 ===
 const API_BASE = import.meta.env.VITE_API_BASE || '/api'
@@ -44,7 +50,10 @@ apiClient.interceptors.response.use(
 
 // === 通用下载处理 ===
 // 用于处理后端返回的 Blob 流（Word 或 Zip）
-export const downloadBlob = (response: AxiosResponse<Blob>, originFilename: string) => {
+export const downloadBlob = (
+  response: AxiosResponse<Blob>,
+  originFilename: string,
+) => {
   const { data, headers } = response
 
   // 尝试从 Content-Disposition 获取文件名
@@ -80,14 +89,17 @@ export const authAPI = {
 
   // POST /api/auth/cas/validate
   validateTicket: (ticket: string) => {
-    return apiClient.post<ApiResponse< LoginResponse|void>>('/auth/cas/validate', {
-      ticket,
-      service: SERVICE_URL,
-    })
+    return apiClient.post<ApiResponse<LoginResponse | void>>(
+      '/auth/cas/validate',
+      {
+        ticket,
+        service: SERVICE_URL,
+      },
+    )
   },
 
   // GET /api/auth/me
-  getCurrentUser: () => apiClient.get<ApiResponse<User|void>>('/auth/me'),
+  getCurrentUser: () => apiClient.get<ApiResponse<User | void>>('/auth/me'),
 
   logout: () => {
     localStorage.removeItem('auth_token')
@@ -102,21 +114,27 @@ export const filingAPI = {
    * 提交表单
    * POST /api/filings/submit
    */
-  submit: (data: FormDataState) => {'blob'
-    return apiClient.post<ApiResponse<number|ZodIssue[]|string>>('/filings/submit', data)
+  submit: (data: FormDataState) => {
+    'blob'
+    return apiClient.post<ApiResponse<number | ZodIssue[] | string>>(
+      '/filings/submit',
+      data,
+    )
   },
 
   /**
    * 获取我的提交记录
    * GET /api/filings/my
    */
-  getMyRecords: () => apiClient.get<ApiResponse<FilingRecord[]|void>>('/filings/my'),
+  getMyRecords: () =>
+    apiClient.get<ApiResponse<FilingRecord[] | void>>('/filings/my'),
 
   /**
    * 删除记录
    * DELETE /api/filings/:id
    */
-  delete: (recordId: number) => apiClient.delete<ApiResponse>(`/filings/${recordId}`),
+  delete: (recordId: number) =>
+    apiClient.delete<ApiResponse>(`/filings/${recordId}`),
 
   /**
    * 导出所有记录 (管理员)

@@ -21,7 +21,6 @@ interface FilingRecord {
   createdAt: Date
 }
 
-
 interface ApiResponse<T = void> {
   message: string
   data?: T

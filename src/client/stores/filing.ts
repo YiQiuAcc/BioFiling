@@ -5,16 +5,16 @@ import {
   type UploadFile,
   type UploadProps,
 } from 'tdesign-vue-next'
+import axios, { AxiosError } from 'axios'
 import { cloneDeep } from 'lodash-es'
 import { filingAPI } from '@/api/index'
-import router from '@/router/router'
-import { type FormDataState, type ImageUploadResponse } from '@/types'
+import type { FilingRecord, FormDataState, ImageUploadResponse } from '@/types'
 
 export const useFilingStore = defineStore('filing', () => {
   const submitting = ref(false)
   const exporting = ref(false)
   const files = ref<UploadFile[]>([])
-  const records = ref<any[]>([]) // 备案记录列表
+  const records = ref<FilingRecord[]>([]) // 备案记录列表
   const loading = ref(false)
   // === Actions ===
   // === 默认状态工厂函数 ===
@@ -64,16 +64,19 @@ export const useFilingStore = defineStore('filing', () => {
     certifyExplanation: '',
     certifyImagesPath: [],
   })
-  const formatResponse: UploadProps['formatResponse'] = (response: ImageUploadResponse) => {
-    // response 是后端返回的完整 JSON 对象
-    if (response.code === 0) {
+
+  const formatResponse: UploadProps['formatResponse'] = (
+    response: ImageUploadResponse,
+  ) => {
+    if (response.code === 0 && response.data) {
       return {
-        status: 'success',        // 组件内部状态
-        url: response.data!.url,   // 用于组件内显示缩略图
-        response: response.data,  // 将后端数据透传，方便后续提交表单时获取 dbPath
+        status: 'success',
+        url: response.data.url,
+        dbPath: response.data.dbPath,
+        originalName: response.data.originalName,
       }
     }
-    return { status: 'fail', error: response.message }
+    return { status: 'fail', error: response.message || '上传失败' }
   }
   /**
    * 重置表单
@@ -92,16 +95,19 @@ export const useFilingStore = defineStore('filing', () => {
     submitting.value = true
     try {
       const payload = cloneDeep(formData)
-      await filingAPI.submit(payload)
-      MessagePlugin.success('备案提交成功')
-
+      const res = await filingAPI.submit(payload)
+      MessagePlugin.success(res.data.message)
+      console.log(res.data.data)
       // 提交成功后，重置表单并跳转回首页
       resetForm()
       files.value = []
-      router.push('/')
       return true
-    } catch (error: any) {
-      MessagePlugin.error(error.response?.data?.message || '提交失败')
+    } catch (error) {
+      console.error(error)
+      MessagePlugin.error('提交失败')
+      if (error instanceof AxiosError) {
+        MessagePlugin.error(error.response?.data.message)
+      }
       return false
     } finally {
       submitting.value = false
@@ -111,11 +117,9 @@ export const useFilingStore = defineStore('filing', () => {
   // === 获取列表 ===
   const fetchRecords = async () => {
     loading.value = true
+    const res = await filingAPI.getMyRecords()
     try {
-      const res = await filingAPI.getMyRecords()
-      // 将响应数据类型转换为 any 以处理可能的包装格式
-      const responseData = res.data as any
-      // 如果是直接数组格式则直接使用，否则尝试从 data 属性获取
+      const responseData = res.data
       if (Array.isArray(responseData)) {
         records.value = responseData
       } else {
@@ -123,7 +127,7 @@ export const useFilingStore = defineStore('filing', () => {
       }
     } catch (error) {
       console.error(error)
-      MessagePlugin.error('获取备案记录失败')
+      MessagePlugin.error(res.data.message)
     } finally {
       loading.value = false
     }
@@ -137,6 +141,7 @@ export const useFilingStore = defineStore('filing', () => {
       fetchRecords()
     } catch (error) {
       MessagePlugin.error('删除失败')
+      console.error(error)
     }
   }
 
@@ -149,6 +154,7 @@ export const useFilingStore = defineStore('filing', () => {
       MessagePlugin.success('下载成功')
     } catch (error) {
       MessagePlugin.error('下载失败')
+      console.error(error)
     }
   }
 
@@ -156,11 +162,12 @@ export const useFilingStore = defineStore('filing', () => {
     exporting.value = true
     try {
       const response = await filingAPI.exportAll()
-      let filename = `生物安全备案汇总_${currentYear}.zip`
+      const filename = `生物安全备案汇总_${currentYear}.zip`
       downloadBlob(response.data, filename)
       MessagePlugin.success('批量导出成功')
     } catch (error) {
       MessagePlugin.error('导出失败，请检查权限')
+      console.error(error)
     } finally {
       exporting.value = false
     }
@@ -178,54 +185,85 @@ export const useFilingStore = defineStore('filing', () => {
     window.URL.revokeObjectURL(url)
   }
 
-  const handleDownloadError = (error: any) => {
-    if (error.response?.data instanceof Blob) {
-      const reader = new FileReader()
-      reader.onload = () => {
-        try {
-          const errData = JSON.parse(reader.result as string)
-          MessagePlugin.error(errData.message || '生成失败')
-        } catch (e) {
-          MessagePlugin.error('服务器错误')
+  const handleDownloadError = (error: unknown) => {
+    // 使用 axios.isAxiosError 缩小类型范围
+    // 只要通过这个判断，TS 就会自动将 error 识别为 AxiosError 类型
+    if (axios.isAxiosError(error)) {
+      // 此时访问 error.response 是安全的（类型提示也会出来）
+      if (error.response?.data instanceof Blob) {
+        const reader = new FileReader()
+        reader.onload = () => {
+          try {
+            const errData = JSON.parse(reader.result as string)
+            MessagePlugin.error(errData.message || '生成失败')
+          } catch (e) {
+            MessagePlugin.error('服务器错误')
+            console.error(e)
+          }
         }
+        reader.readAsText(error.response.data)
+      } else {
+        // 如果有 response 但不是 blob，或者根本没有 response
+        MessagePlugin.error(error.message || '网络请求失败')
       }
-      reader.readAsText(error.response.data)
     } else {
-      MessagePlugin.error('网络请求失败')
+      // 处理非 Axios 错误（例如代码逻辑抛出的 Error）
+      console.error('发生错误:', error)
+      MessagePlugin.error('发生未知系统错误')
     }
   }
+
   const syncFilesToFormData = () => {
-    // 清空旧数据，避免重复 push
     const paths: string[] = []
+    console.log('syncFilesToFormData', files.value)
+    console.log('files', formData.certifyImagesPath)
+    if (!files.value || files.value.length < 1) return
+    files.value.forEach((file) => {
+      if (file.status !== 'success' || !file.response) {
+        return
+      }
 
-    if (files.value && files.value.length > 0) {
-      files.value.forEach((file) => {
-        // 注意：根据你的 upload.controller.ts，后端返回结构在 file.response.dbPath
-        // 如果是 TDesign 的 formatResponse 包装过，可能层级要注意
-        if (file.response?.dbPath) {
-          paths.push(file.response.dbPath)
-        }
-      })
-    }
+      const resp = file.response as {
+        status: 'success'
+        url: string
+        dbPath: string
+        originalName: string
+      }
 
-    // 更新 formData
+      const dbPath = resp.dbPath
+
+      if (dbPath) {
+        paths.push(dbPath)
+      } else {
+        console.warn('未找到 dbPath，文件对象:', file)
+      }
+    })
     formData.certifyImagesPath = paths
+
+    console.log(
+      '更新后的 formData.certifyImagesPath:',
+      formData.certifyImagesPath,
+    )
   }
+
   return {
-    formData,
+    // 状态
+    loading,
     submitting,
     exporting,
-    records,
-    loading,
-    files,
-    deleteRecord,
-    syncFilesToFormData,
-    formatResponse,
+    // 方法
     resetForm,
+    syncFilesToFormData,
     triggerSubmit,
+    fetchRecords,
+    deleteRecord,
+    downloadRecordDoc,
     exportAllRecords,
     handleDownloadError,
-    fetchRecords,
-    downloadRecordDoc,
+    // 数据
+    formData,
+    records,
+    files,
+    formatResponse,
   }
 })

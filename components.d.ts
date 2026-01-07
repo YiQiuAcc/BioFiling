@@ -28,7 +28,6 @@ declare module 'vue' {
     TFormItem: typeof import('tdesign-vue-next')['FormItem']
     TInput: typeof import('tdesign-vue-next')['Input']
     TInputGroup: typeof import('tdesign-vue-next')['InputGroup']
-    TInputNumber: typeof import('tdesign-vue-next')['InputNumber']
     TLink: typeof import('tdesign-vue-next')['Link']
     TLoading: typeof import('tdesign-vue-next')['Loading']
     TOption: typeof import('tdesign-vue-next')['Option']

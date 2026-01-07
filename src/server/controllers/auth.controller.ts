@@ -86,5 +86,5 @@ export const getCurrentUser = (req: Request, res: Response) => {
 
   res
     .status(200)
-    .json({ message: '获取成功', data: req.user } as ApiResponse<User>)
+    .json({ message: '用户获取成功', data: req.user } as ApiResponse<User>)
 }

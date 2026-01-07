@@ -28,7 +28,7 @@ export const uploadHandler = (req: Request, res: Response) => {
     code: 0,
     message: '上传成功',
     data: {
-      url: fileUrl,           // 前端展示用的完整 URL
+      url: fileUrl, // 前端展示用的完整 URL
       dbPath: normalizedPath, // 建议存入数据库的相对路径
       originalName: file.originalname,
       size: file.size,

@@ -6,7 +6,7 @@ import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
-  const currentUser = ref<User | null>(null)
+  const currentUser = ref<User | void>()
   const token = ref(localStorage.getItem('auth_token') || '')
 
   // Getters
@@ -21,8 +21,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
     try {
       const res = await authAPI.getCurrentUser()
-      currentUser.value = res.data
-    } catch (error: any) {
+      console.log(res.data.message)
+      currentUser.value = res.data.data
+    } catch (error) {
       // 如果获取用户信息失败（Token 过期），清理状态
       console.warn('Init auth failed:', error)
       clearLocalAuth()
@@ -45,21 +46,18 @@ export const useAuthStore = defineStore('auth', () => {
 
       // 后端返回: { token: "...", user: { ... } }
       // Axios 将其包裹在 data 中: res.data = { token: "...", user: { ... } }
-      const { token: newToken, user } = res.data
+      const { data: loginResponse } = res.data
 
-      if (!newToken || !user) {
-        throw new Error('Invalid response structure')
+      if (!loginResponse) {
+        throw new Error('Invalid login response')
       }
-
+      MessagePlugin.info(res.data.message)
       // 保存状态
-      token.value = newToken
-      currentUser.value = user
-      localStorage.setItem('auth_token', newToken)
+      token.value = loginResponse.token
+      currentUser.value = loginResponse.user
+      localStorage.setItem('auth_token', token.value)
 
-      // 可选：在此处将用户信息也存入 localStorage 防止刷新闪烁，但主要依靠 Token
-      // localStorage.setItem('user_info', JSON.stringify(user))
-
-      MessagePlugin.success(`欢迎回来，${user.name}`)
+      MessagePlugin.success(`欢迎回来，${currentUser.value.name}`)
       return true
     } catch (error) {
       console.error('Ticket validation failed:', error)
@@ -82,7 +80,7 @@ export const useAuthStore = defineStore('auth', () => {
    */
   const clearLocalAuth = () => {
     token.value = ''
-    currentUser.value = null
+    currentUser.value = void 0
     localStorage.removeItem('auth_token')
     localStorage.removeItem('user_info')
   }

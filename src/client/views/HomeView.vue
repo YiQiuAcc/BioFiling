@@ -69,6 +69,7 @@ import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { AddIcon, DownloadIcon } from 'tdesign-icons-vue-next'
 import { useFilingStore } from '@/stores/filing'
+import type { FilingRecord } from '@/types'
 
 const store = useFilingStore()
 const { records, loading } = storeToRefs(store)
@@ -95,7 +96,7 @@ const getStatusTheme = (status: string) => {
   }
 }
 
-const handleDownload = (row: any) => {
+const handleDownload = (row: FilingRecord) => {
   store.downloadRecordDoc(row.id, row.projectName)
 }
 

@@ -3,7 +3,12 @@ import { Request, Response } from 'express'
 import logger from '@/utils/logger'
 import { docxService } from '@/services/docx.service'
 import { filingService } from '@/services/filing.service'
-import { ApiResponse, FilingRecord, FormDataState, formDataSchema } from '@/types'
+import {
+  ApiResponse,
+  FilingRecord,
+  FormDataState,
+  formDataSchema,
+} from '@/types'
 
 /**
  * 提交表单 (仅保存)
@@ -29,9 +34,8 @@ export const submit = async (req: Request, res: Response) => {
 
     logger.info(`Filing created: id=${record.id} by ${user.netId}`)
 
-    // 返回标准化的成功响应
     res.status(200).json({
-      message: '提交成功',
+      message: '备案提交成功',
       data: record.id,
     } as ApiResponse<number>)
   } catch (e) {
@@ -79,6 +83,7 @@ export const downloadRecord = async (req: Request, res: Response) => {
     }
 
     // 准备渲染数据
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const formData = record.content as Record<string, any>
     const renderData = {
       ...(formData as FormDataState), // 展开存储的表单数据
@@ -123,12 +128,14 @@ export const downloadRecord = async (req: Request, res: Response) => {
 export const getMyRecords = async (req: Request, res: Response) => {
   try {
     const records = await filingService.getUserRecords(req.user!.netId)
-    res.status(200).json({ message: '获取成功', data: records } as ApiResponse<
-      FilingRecord[]
-    >)
+    res
+      .status(200)
+      .json({ message: '获取备案记录成功', data: records } as ApiResponse<
+        FilingRecord[]
+      >)
   } catch (e) {
     logger.error('Get Records Error:', e)
-    res.status(500).json({ message: '获取记录失败' } as ApiResponse)
+    res.status(500).json({ message: '获取备案记录失败' } as ApiResponse)
   }
 }
 

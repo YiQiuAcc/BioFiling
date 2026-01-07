@@ -24,6 +24,12 @@ const routes = [
       },
     ],
   },
+  // 404
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'not-found',
+    redirect: '/',
+  },
 ]
 
 const router = createRouter({
@@ -72,7 +78,15 @@ router.beforeEach(async (to, _from, next) => {
     // 已有 Token 但内存中无用户信息 (页面刷新场景)
     if (authStore.isLoggedIn && !authStore.currentUser) {
       await authStore.initAuth()
+
+      // 再次检查状态, 如果 initAuth 内部报错并调用了 clearLocalAuth，此时 isLoggedIn 应该变为了 false
+      if (!authStore.isLoggedIn) {
+        // Token 失效, 去登录页（CAS）
+        authStore.login()
+        return
+      }
     }
+    // 只有状态依然正常，才放行
     next()
   }
 })

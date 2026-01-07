@@ -14,6 +14,7 @@
               name="certifyImages"
               action="/api/upload/image"
               :format-response="store.formatResponse"
+              :onSuccess="store.syncFilesToFormData"
               :headers="uploadHeaders"
               theme="image"
               accept="image/*"

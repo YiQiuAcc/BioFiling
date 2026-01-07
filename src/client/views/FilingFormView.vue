@@ -16,7 +16,6 @@
       <section-files class="section-files" />
     </t-form>
 
-
     <Teleport to="body">
       <action-footer @submit="handleFormSubmit" @reset="handleFormReset" />
     </Teleport>
@@ -24,13 +23,13 @@
 </template>
 
 <script setup lang="ts">
+import { nextTick } from 'vue'
 import { storeToRefs } from 'pinia'
 import { InfoCircleIcon } from 'tdesign-icons-vue-next'
 import { useForm } from 'vee-validate'
 import { useFilingStore } from '@/stores/filing'
+import router from '@/router/router'
 import ActionFooter from '@/components/ActionFooter.vue'
-// 假设路径
-
 // 引入子组件
 import SectionBasic from '@/components/filing/SectionBasic.vue'
 import SectionContent from '@/components/filing/SectionContent.vue'
@@ -55,21 +54,26 @@ const {
 
 // === 处理提交 ===
 const handleFormSubmit = async () => {
-  // 提交前强制同步一次值。
+  // 同步 Pinia 数据
   filingStore.syncFilesToFormData()
-  // 将 Pinia 的最新数据同步给 VeeValidate
   setValues(formData.value)
-  // 触发验证
+
+  // 验证
   const result = await validate()
 
   if (result.valid) {
-    // 验证通过，调用 Store 的 API 提交逻辑
-    await filingStore.triggerSubmit()
+    // === 验证成功 ===
+    const success = await filingStore.triggerSubmit()
+    if (success) {
+      // 使用 replace 防止用户点“后退”又回到填表页重复提交
+      router.replace('/')
+    }
   } else {
-    if (result.errors) return
-    // 验证失败
+    // === 验证失败 ===
     console.log('表单验证失败', result.errors)
-    // 滚动到第一个错误
+    // 等待 Vue 更新 DOM (显示错误红字) 后再滚动
+    await nextTick()
+    // 这里的 result.errors 就是 Record<path, message>
     scrollToFirstError(result.errors)
   }
 }
@@ -80,45 +84,84 @@ const handleFormReset = () => {
   resetForm()
 }
 
+// 定义字段与 Section 类的映射关系
+const fieldToSectionMap: Record<string, string> = {
+  // === Basic Section ===
+  leaderName: '.section-basic',
+  leaderId: '.section-basic',
+  department: '.section-basic',
+  title: '.section-basic',
+  phone: '.section-basic',
+  email: '.section-basic',
+  projectName: '.section-basic',
+  projectSource: '.section-basic',
+  projectType: '.section-basic',
+  experimenterCount: '.section-basic',
+
+  // === Personnel Section ===
+  personnel: '.section-personnel', // 数组字段通常是 personnel[0].name
+
+  // === Risk Section ===
+  animalName: '.section-risk',
+  animalStrain: '.section-risk',
+  animalGrade: '.section-risk',
+  pathogenName: '.section-risk',
+  pathogenType: '.section-risk',
+  pathogenSource: '.section-risk',
+  bslLevel: '.section-risk',
+  operationTypes: '.section-risk',
+  isZoonotic: '.section-risk',
+  isHighPathogenic: '.section-risk',
+  hasToxicSubstance: '.section-risk',
+  toxicSubstanceDesc: '.section-risk',
+
+  // === Location Section ===
+  locationType: '.section-location',
+  locationDetail: '.section-location',
+  dateRange: '.section-location',
+
+  // === Content Section ===
+  workProject: '.section-content',
+  experimentMethod: '.section-content',
+  experimentPurpose: '.section-content',
+  disposalMethod: '.section-content',
+  facilityMatchDesc: '.section-content',
+
+  // === Files Section ===
+  certifyExplanation: '.section-files',
+  certifyImagesPath: '.section-files',
+  publicInfoType: '.section-files',
+  publicInfoDesc: '.section-files',
+}
+
 // 滚动到错误位置
-const scrollToFirstError = (errors: Record<string, string>) => {
-  const firstErrorKey = Object.keys(errors)[0]
-  if (firstErrorKey) {
-    // 根据错误字段名称确定对应的部分
-    let sectionSelector = ''
+const scrollToFirstError = (errors: Record<string, string | undefined>) => {
+  const keys = Object.keys(errors)
+  if (keys.length === 0) return
+  // 获取第一个错误的字段名
+  const firstErrorKey = keys[0]
+  // 处理数组或嵌套对象的情况
+  const rootKey = firstErrorKey?.split(/[.[]/)[0]
+  if (!rootKey) return
+  // 查找该字段属于哪个 Section
+  const sectionSelector = fieldToSectionMap[rootKey]
+  if (sectionSelector) {
+    const sectionEl = document.querySelector(sectionSelector)
+    if (sectionEl) {
+      // 偏移量
+      const headerOffset = 80
+      const elementPosition = sectionEl.getBoundingClientRect().top
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
 
-    if (firstErrorKey.startsWith('basicInfo')) {
-      sectionSelector = '.section-basic'
-    } else if (firstErrorKey.startsWith('personnel')) {
-      sectionSelector = '.section-personnel'
-    } else if (firstErrorKey.startsWith('riskAssessment')) {
-      sectionSelector = '.section-risk'
-    } else if (firstErrorKey.startsWith('location')) {
-      sectionSelector = '.section-location'
-    } else if (firstErrorKey.startsWith('content')) {
-      sectionSelector = '.section-content'
-    } else if (firstErrorKey.startsWith('files')) {
-      sectionSelector = '.section-files'
-    }
-
-    // 如果找到了对应的区域，就滚动到该区域
-    if (sectionSelector) {
-      const sectionEl = document.querySelector(sectionSelector)
-      if (sectionEl) {
-        sectionEl.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        return
-      }
-    }
-
-    // 如果没有找到特定区域，尝试直接定位到错误元素
-    let selector = `[name="${firstErrorKey}"]`
-    const el = document.querySelector(selector)
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    } else {
-      // 如果找不到具体的元素，滚动到顶部作为兜底
-      window.scrollTo({ top: 0, behavior: 'smooth' })
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth',
+      })
+      return
     }
   }
+  // 如果没有匹配到 Section，尝试滚回顶部
+  console.warn('无法定位错误区域，滚动至顶部', firstErrorKey)
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 </script>
