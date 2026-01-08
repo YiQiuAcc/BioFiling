@@ -1,151 +1,155 @@
 import { reactive, ref } from 'vue'
 import { defineStore } from 'pinia'
-import {
-  MessagePlugin,
-  type UploadFile,
-  type UploadProps,
-} from 'tdesign-vue-next'
-import axios, { AxiosError } from 'axios'
+import { MessagePlugin } from 'tdesign-vue-next'
+import { AxiosError } from 'axios'
 import { cloneDeep } from 'lodash-es'
+import {
+  downloadBlob,
+  getDefaultFormData,
+  handleDownloadError,
+} from '@/utils/filing'
 import { filingAPI } from '@/api/index'
-import type { FilingRecord, FormDataState, ImageUploadResponse } from '@/types'
+import type { FilingDetail, FilingRecord, FormDataState } from '@/types'
 
 export const useFilingStore = defineStore('filing', () => {
+  // === State ===
+  const loading = ref(false)
   const submitting = ref(false)
   const exporting = ref(false)
-  const files = ref<UploadFile[]>([])
-  const records = ref<FilingRecord[]>([]) // 备案记录列表
-  const loading = ref(false)
-  // === Actions ===
-  // === 默认状态工厂函数 ===
-  const getDefaultFormData = (): FormDataState => ({
-    leaderName: '',
-    leaderId: '',
-    department: '',
-    title: '',
-    phone: '',
-    email: '',
-    projectName: '',
-    projectSource: '',
-    projectType: '科研',
-    experimenterCount: 1,
-    personnel: [
-      {
-        key: crypto.randomUUID(),
-        department: '',
-        name: '',
-        id: '',
-        phone: '',
-        content: '',
-      },
-    ],
-    animalName: '',
-    animalStrain: '',
-    animalGrade: '',
-    pathogenName: '',
-    pathogenType: '微生物',
-    pathogenSource: '',
-    bslLevel: '',
-    operationTypes: [],
-    isZoonotic: false,
-    isHighPathogenic: false,
-    hasToxicSubstance: false,
-    toxicSubstanceDesc: '',
-    locationType: '校内',
-    locationDetail: '',
-    dateRange: [],
-    facilityMatchDesc: '',
-    workProject: '',
-    experimentMethod: '',
-    experimentPurpose: '',
-    disposalMethod: '',
-    publicInfoType: '部分公开',
-    publicInfoDesc: '',
-    certifyExplanation: '',
-    certifyImagesPath: [],
-  })
 
-  const formatResponse: UploadProps['formatResponse'] = (
-    response: ImageUploadResponse,
-  ) => {
-    if (response.code === 0 && response.data) {
-      return {
-        status: 'success',
-        url: response.data.url,
-        dbPath: response.data.dbPath,
-        originalName: response.data.originalName,
-      }
-    }
-    return { status: 'fail', error: response.message || '上传失败' }
-  }
-  /**
-   * 重置表单
-   */
-  const resetForm = () => {
-    const defaultState = getDefaultFormData()
-    // 使用 Object.assign 保持响应式引用不变
-    Object.assign(formData, defaultState)
-    // 如果有深层嵌套对象，建议结合 cloneDeep:
-    // Object.assign(formData, cloneDeep(getDefaultFormData()))
-  }
-  // 初始化数据
+  // 核心业务数据
+  const records = ref<FilingRecord[]>([])
+  // 详情数据
+  const currentRecord = ref<FilingRecord | null>(null)
   const formData = reactive<FormDataState>(getDefaultFormData())
-  // 提交逻辑
+  // === Actions: 表单操作 ===
+
+  /** 重置表单 */
+  const resetForm = () => {
+    Object.assign(formData, getDefaultFormData())
+  }
+
+  /** 设置表单数据 (用于编辑回显) */
+  const setFormData = (data: Partial<FormDataState>) => {
+    // 深度合并或直接赋值，需注意数组的处理
+    Object.assign(formData, data)
+  }
+
+  /** 提交新建 */
   const triggerSubmit = async () => {
     submitting.value = true
     try {
       const payload = cloneDeep(formData)
       const res = await filingAPI.submit(payload)
       MessagePlugin.success(res.data.message)
-      console.log(res.data.data)
-      // 提交成功后，重置表单并跳转回首页
       resetForm()
-      files.value = []
       return true
     } catch (error) {
-      console.error(error)
-      MessagePlugin.error('提交失败')
-      if (error instanceof AxiosError) {
-        MessagePlugin.error(error.response?.data.message)
-      }
+      handleApiError(error, '提交失败')
       return false
     } finally {
       submitting.value = false
     }
   }
 
-  // === 获取列表 ===
+  /** 提交更新 */
+  const updateRecord = async (id: number) => {
+    submitting.value = true
+    try {
+      const payload = cloneDeep(formData)
+      const res = await filingAPI.update(id, payload)
+      MessagePlugin.success(res.data.message)
+      resetForm()
+      return true
+    } catch (error) {
+      handleApiError(error, '更新失败')
+      return false
+    } finally {
+      submitting.value = false
+    }
+  }
+
+  // === Actions: 数据获取 ===
   const fetchRecords = async () => {
     loading.value = true
-    const res = await filingAPI.getMyRecords()
     try {
-      const responseData = res.data
-      if (Array.isArray(responseData)) {
-        records.value = responseData
-      } else {
-        records.value = []
-      }
+      const res = await filingAPI.getMyRecords()
+      records.value = res.data.data || []
     } catch (error) {
       console.error(error)
-      MessagePlugin.error(res.data.message)
+      MessagePlugin.error('获取列表失败')
     } finally {
       loading.value = false
     }
   }
 
-  // === 删除记录 ===
+  const fetchRecordDetail = async (id: number) => {
+    loading.value = true
+    try {
+      // 这里调用的是返回 FilingDetail 的接口
+      const { data } = await filingAPI.getDetail(id)
+      if (data && data.data) {
+        const detail = data.data
+        // 设置头部元数据 (currentRecord 只存基本信息即可)
+        currentRecord.value = {
+          id: detail.id,
+          projectName: detail.projectName,
+          status: detail.status,
+          leaderName: detail.leaderName,
+          department: detail.department,
+          createdAt: detail.createdAt,
+          auditComment: detail.auditComment,
+        } as FilingRecord
+        // 回填表单
+        mapRecordToForm(detail)
+      } else {
+        MessagePlugin.error('记录不存在')
+      }
+    } catch (error) {
+      console.error(error)
+      MessagePlugin.error('获取详情失败')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  // === Actions: 业务操作 ===
   const deleteRecord = async (id: number) => {
     try {
       await filingAPI.delete(id)
       MessagePlugin.success('删除成功')
-      fetchRecords()
+      // 如果删除的是当前列表中的项，直接本地移除，避免重新请求
+      const idx = records.value.findIndex((r) => r.id === id)
+      if (idx !== -1) records.value.splice(idx, 1)
     } catch (error) {
       MessagePlugin.error('删除失败')
-      console.error(error)
     }
   }
 
-  // === 下载单个文件 ===
+  const auditRecord = async (
+    id: number,
+    status: 'APPROVED' | 'REJECTED',
+    comment?: string,
+  ) => {
+    try {
+      await filingAPI.audit(id, status, comment)
+
+      // 更新本地状态
+      if (currentRecord.value?.id === id) {
+        currentRecord.value.status = status
+        currentRecord.value.auditComment = comment || ''
+      }
+      const record = records.value.find((r) => r.id === id)
+      if (record) record.status = status
+
+      MessagePlugin.success(status === 'APPROVED' ? '已通过' : '已驳回')
+      return true
+    } catch (error) {
+      MessagePlugin.error('审核操作失败')
+      return false
+    }
+  }
+
   const downloadRecordDoc = async (id: number, projectName: string) => {
     try {
       MessagePlugin.loading('正在生成文档...')
@@ -153,8 +157,7 @@ export const useFilingStore = defineStore('filing', () => {
       downloadBlob(response.data, `生物安全备案_${projectName}.docx`)
       MessagePlugin.success('下载成功')
     } catch (error) {
-      MessagePlugin.error('下载失败')
-      console.error(error)
+      handleDownloadError(error)
     }
   }
 
@@ -162,108 +165,66 @@ export const useFilingStore = defineStore('filing', () => {
     exporting.value = true
     try {
       const response = await filingAPI.exportAll()
-      const filename = `生物安全备案汇总_${currentYear}.zip`
-      downloadBlob(response.data, filename)
-      MessagePlugin.success('批量导出成功')
+      downloadBlob(response.data, `生物安全备案汇总_${currentYear}.zip`)
+      MessagePlugin.success('导出成功')
     } catch (error) {
-      MessagePlugin.error('导出失败，请检查权限')
-      console.error(error)
+      MessagePlugin.error('导出失败')
     } finally {
       exporting.value = false
     }
   }
 
-  // === Utils (Internal) ===
-  const downloadBlob = (blob: Blob, filename: string) => {
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
-  }
-
-  const handleDownloadError = (error: unknown) => {
-    // 使用 axios.isAxiosError 缩小类型范围
-    // 只要通过这个判断，TS 就会自动将 error 识别为 AxiosError 类型
-    if (axios.isAxiosError(error)) {
-      // 此时访问 error.response 是安全的（类型提示也会出来）
-      if (error.response?.data instanceof Blob) {
-        const reader = new FileReader()
-        reader.onload = () => {
-          try {
-            const errData = JSON.parse(reader.result as string)
-            MessagePlugin.error(errData.message || '生成失败')
-          } catch (e) {
-            MessagePlugin.error('服务器错误')
-            console.error(e)
-          }
-        }
-        reader.readAsText(error.response.data)
-      } else {
-        // 如果有 response 但不是 blob，或者根本没有 response
-        MessagePlugin.error(error.message || '网络请求失败')
-      }
+  // 内部通用错误处理
+  const handleApiError = (error: unknown, defaultMsg: string) => {
+    console.error(error)
+    if (error instanceof AxiosError) {
+      MessagePlugin.error(error.response?.data.message || defaultMsg)
     } else {
-      // 处理非 Axios 错误（例如代码逻辑抛出的 Error）
-      console.error('发生错误:', error)
-      MessagePlugin.error('发生未知系统错误')
+      MessagePlugin.error(defaultMsg)
     }
   }
+  // === 将 API 返回的 Record 转换为 Form 需要的格式 ===
+  // === 辅助函数：输入改为 FilingDetail ===
+  const mapRecordToForm = (detail: FilingDetail) => {
+    // 解构出不需要放入表单的系统字段
+    const {
+      id,
+      status,
+      createdAt,
+      updatedAt,
+      auditComment,
+      submitterName,
+      ...formFields
+    } = detail
+    // 准备回填数据
+    // 强制转换为 any 或 FormDataState 以便进行清洗
+    const targetData = { ...formFields } as FormDataState
+    // 数据清洗 (后端 null -> 前端默认值)
+    if (!targetData.leaderName) targetData.leaderName = ''
+    if (!targetData.department) targetData.department = ''
+    if (!targetData.certifyImagesPath) targetData.certifyImagesPath = []
+    if (!targetData.personnel) targetData.personnel = []
 
-  const syncFilesToFormData = () => {
-    const paths: string[] = []
-    console.log('syncFilesToFormData', files.value)
-    console.log('files', formData.certifyImagesPath)
-    if (!files.value || files.value.length < 1) return
-    files.value.forEach((file) => {
-      if (file.status !== 'success' || !file.response) {
-        return
-      }
-
-      const resp = file.response as {
-        status: 'success'
-        url: string
-        dbPath: string
-        originalName: string
-      }
-
-      const dbPath = resp.dbPath
-
-      if (dbPath) {
-        paths.push(dbPath)
-      } else {
-        console.warn('未找到 dbPath，文件对象:', file)
-      }
-    })
-    formData.certifyImagesPath = paths
-
-    console.log(
-      '更新后的 formData.certifyImagesPath:',
-      formData.certifyImagesPath,
-    )
+    // 回填到响应式对象
+    Object.assign(formData, targetData)
   }
 
   return {
-    // 状态
     loading,
     submitting,
     exporting,
-    // 方法
+    records,
+    currentRecord,
+    formData,
     resetForm,
-    syncFilesToFormData,
+    setFormData,
     triggerSubmit,
+    updateRecord,
     fetchRecords,
+    fetchRecordDetail,
     deleteRecord,
+    auditRecord,
     downloadRecordDoc,
     exportAllRecords,
-    handleDownloadError,
-    // 数据
-    formData,
-    records,
-    files,
-    formatResponse,
   }
 })

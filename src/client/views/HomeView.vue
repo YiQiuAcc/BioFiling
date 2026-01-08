@@ -51,11 +51,56 @@
           </template>
 
           <template #op="{ row }">
-            <t-space>
-              <t-link theme="primary" @click="handleDownload(row)">
-                <download-icon slot="prefix-icon" />
-                下载文档
-              </t-link>
+            <t-space size="small">
+              <t-tooltip content="查看详情">
+                <t-button
+                  variant="text"
+                  shape="square"
+                  theme="primary"
+                  @click="$router.push(`/preview/${row.id}`)"
+                >
+                  <template #icon><browse-icon /></template>
+                </t-button>
+              </t-tooltip>
+
+              <t-tooltip content="编辑" v-if="row.status !== 'APPROVED'">
+                <t-button
+                  variant="text"
+                  shape="square"
+                  theme="default"
+                  @click="$router.push(`/edit/${row.id}`)"
+                >
+                  <template #icon><edit-icon /></template>
+                </t-button>
+              </t-tooltip>
+
+              <t-tooltip content="下载文档">
+                <t-button
+                  variant="text"
+                  shape="square"
+                  theme="primary"
+                  @click="handleDownload(row)"
+                >
+                  <template #icon><download-icon /></template>
+                </t-button>
+              </t-tooltip>
+
+              <t-popconfirm
+                content="确认删除该记录吗？"
+                theme="danger"
+                @confirm="handleDelete(row.id)"
+              >
+                <t-tooltip content="删除" theme="danger">
+                  <t-button
+                    v-if="row.status !== 'APPROVED'"
+                    variant="text"
+                    shape="square"
+                    theme="danger"
+                  >
+                    <template #icon><delete-icon /></template>
+                  </t-button>
+                </t-tooltip>
+              </t-popconfirm>
             </t-space>
           </template>
         </t-table>
@@ -67,7 +112,13 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { storeToRefs } from 'pinia'
-import { AddIcon, DownloadIcon } from 'tdesign-icons-vue-next'
+import {
+  AddIcon,
+  BrowseIcon,
+  DeleteIcon,
+  DownloadIcon,
+  EditIcon,
+} from 'tdesign-icons-vue-next'
 import { useFilingStore } from '@/stores/filing'
 import type { FilingRecord } from '@/types'
 
@@ -81,7 +132,7 @@ const columns = [
   { colKey: 'department', title: '所属院系', width: 150 },
   { colKey: 'status', title: '状态', width: 120 },
   { colKey: 'createdAt', title: '提交日期', width: 120 },
-  { colKey: 'op', title: '操作', width: 120, fixed: 'right' as const },
+  { colKey: 'op', title: '操作', width: 200, fixed: 'right' as const },
 ]
 
 // 状态样式映射
@@ -100,19 +151,11 @@ const handleDownload = (row: FilingRecord) => {
   store.downloadRecordDoc(row.id, row.projectName)
 }
 
+const handleDelete = async (id: number) => {
+  await store.deleteRecord(id)
+}
+
 onMounted(() => {
   store.fetchRecords()
 })
 </script>
-
-<style scoped>
-.title {
-  margin-bottom: 4px;
-  font-weight: 600;
-}
-
-.text-secondary {
-  color: var(--td-text-color-secondary);
-  font-size: 14px;
-}
-</style>

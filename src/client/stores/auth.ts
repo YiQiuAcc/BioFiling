@@ -6,14 +6,21 @@ import type { User } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
   // 状态
-  const currentUser = ref<User | void>()
+  const currentUser = ref<User | undefined>()
   const token = ref(localStorage.getItem('auth_token') || '')
 
   // Getters
   const isLoggedIn = computed(() => !!token.value)
   const isAdmin = computed(() => currentUser.value?.isAdmin || false)
 
-  // Actions
+  // 内部清理方法
+  const clearLocalAuth = () => {
+    token.value = ''
+    currentUser.value = undefined
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user_info')
+  }
+
   /**
    * 初始化：如果有 token，尝试获取用户信息
    */
@@ -21,11 +28,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (!token.value) return
     try {
       const res = await authAPI.getCurrentUser()
-      console.log(res.data.message)
-      currentUser.value = res.data.data
+      if (res.data && res.data.data) {
+        currentUser.value = res.data.data
+      }
     } catch (error) {
-      // 如果获取用户信息失败（Token 过期），清理状态
-      console.warn('Init auth failed:', error)
+      console.warn('Init auth failed (Token expired):', error)
       clearLocalAuth()
     }
   }
@@ -44,24 +51,28 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const res = await authAPI.validateTicket(ticket)
 
-      // 后端返回: { token: "...", user: { ... } }
-      // Axios 将其包裹在 data 中: res.data = { token: "...", user: { ... } }
-      const { data: loginResponse } = res.data
+      const apiResponse = res.data
 
-      if (!loginResponse) {
+      if (!apiResponse || !apiResponse.data) {
         throw new Error('Invalid login response')
       }
-      MessagePlugin.info(res.data.message)
-      // 保存状态
-      token.value = loginResponse.token
-      currentUser.value = loginResponse.user
-      localStorage.setItem('auth_token', token.value)
 
-      MessagePlugin.success(`欢迎回来，${currentUser.value.name}`)
+      const { token: newToken, user } = apiResponse.data
+
+      MessagePlugin.success(apiResponse.message || '登录成功')
+
+      // 保存状态
+      token.value = newToken
+      currentUser.value = user
+      localStorage.setItem('auth_token', newToken)
+      // 可存用户信息在 localStorage
+      // localStorage.setItem('user_info', JSON.stringify(user))
+
+      MessagePlugin.success(`欢迎回来，${user.name}`)
       return true
     } catch (error) {
       console.error('Ticket validation failed:', error)
-      // 清理可能残留的错误 Token
+      MessagePlugin.error('登录验证失败，请重试')
       clearLocalAuth()
       return false
     }
@@ -73,16 +84,6 @@ export const useAuthStore = defineStore('auth', () => {
   const logout = () => {
     clearLocalAuth()
     authAPI.logout() // 跳转到 CAS 注销页面
-  }
-
-  /**
-   * 仅清理本地状态 (内部使用)
-   */
-  const clearLocalAuth = () => {
-    token.value = ''
-    currentUser.value = void 0
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_info')
   }
 
   return {

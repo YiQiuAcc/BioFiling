@@ -46,8 +46,7 @@ app.use(express.urlencoded({ extended: true }))
 
 // 业务路由
 app.use('/api', router)
-app.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')))
-
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 // 错误处理 (严格按照顺序：路由 -> 404 -> 全局错误)
 app.use(notFoundHandler) // 处理找不到的路由
 app.use(errorHandler) // 处理所有抛出的错误

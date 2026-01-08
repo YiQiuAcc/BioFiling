@@ -72,9 +72,7 @@
             <t-input v-model="formData.email" />
           </t-form-item>
         </t-col>
-
         <t-col :span="12" :md="12" :xs="24">
-          <t-form-item style="font-size: medium">项目信息</t-form-item>
           <t-form-item
             label="项目名称"
             name="projectName"

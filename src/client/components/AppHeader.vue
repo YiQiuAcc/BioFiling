@@ -10,7 +10,7 @@
       </div>
       <div class="header-actions">
         <t-button
-          v-if="isAdmin"
+          v-if="authStore.isAdmin"
           theme="default"
           variant="outline"
           size="large"
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { DownloadIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
 import { useAppStore } from '@/stores/app'
@@ -53,14 +53,9 @@ const appStore = useAppStore()
 const exporting = ref(false)
 
 const authStore = useAuthStore()
-
-// 从authStore获取用户信息
-const currentUser = computed(() => authStore.currentUser)
-const isAdmin = computed(() => currentUser.value?.isAdmin)
-
 // 批量导出
 const handleBatchExport = async () => {
-  if (!isAdmin.value) return
+  if (!authStore.isAdmin) return
   exporting.value = true
   try {
     const response = await filingAPI.exportAll()

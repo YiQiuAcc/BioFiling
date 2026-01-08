@@ -2,7 +2,12 @@
   <div id="section-personnel" class="form-section">
     <t-card title="实验室准入人员" :bordered="false" header-bordered>
       <template #actions>
-        <t-button variant="dashed" theme="primary" @click="handleAddPerson">
+        <t-button
+          v-if="!readonly"
+          variant="dashed"
+          theme="primary"
+          @click="handleAddPerson"
+        >
           <template #icon><add-icon /></template>
           新增人员
         </t-button>
@@ -11,56 +16,51 @@
         <t-table
           row-key="key"
           :data="formData.personnel"
-          :columns="personnelColumns"
+          :columns="dynamicColumns"
           bordered
           hover
           size="medium"
         >
-          <template #department="{ row, rowIndex }">
+          <template #department="{ row }">
             <t-input
               v-model="row.department"
-              placeholder="院系"
-              variant="outline"
-              size="small"
-              :status="getError(rowIndex, 'department') ? 'error' : 'default'"
+              placeholder="请输入"
+              :readonly="readonly"
             />
           </template>
-          <template #name="{ row, rowIndex }">
+
+          <template #name="{ row }">
             <t-input
               v-model="row.name"
-              placeholder="姓名"
-              variant="outline"
-              size="small"
-              :status="getError(rowIndex, 'name') ? 'error' : 'default'"
+              placeholder="请输入"
+              :readonly="readonly"
             />
           </template>
-          <template #id="{ row, rowIndex }">
+
+          <template #id="{ row }">
             <t-input
               v-model="row.id"
-              placeholder="工号"
-              variant="outline"
-              size="small"
-              :status="getError(rowIndex, 'id') ? 'error' : 'default'"
+              placeholder="请输入"
+              :readonly="readonly"
             />
           </template>
-          <template #phone="{ row, rowIndex }">
+
+          <template #phone="{ row }">
             <t-input
               v-model="row.phone"
-              placeholder="电话"
-              variant="outline"
-              size="small"
-              :status="getError(rowIndex, 'phone') ? 'error' : 'default'"
+              placeholder="请输入"
+              :readonly="readonly"
             />
           </template>
-          <template #content="{ row, rowIndex }">
+
+          <template #content="{ row }">
             <t-input
               v-model="row.content"
-              placeholder="实验内容"
-              variant="outline"
-              size="small"
-              :status="getError(rowIndex, 'content') ? 'error' : 'default'"
+              placeholder="简述内容"
+              :readonly="readonly"
             />
           </template>
+
           <template #op="{ rowIndex }">
             <t-button
               theme="danger"
@@ -73,46 +73,53 @@
             </t-button>
           </template>
         </t-table>
-        <div
-          v-if="errors.personnel"
-          class="t-is-error t-input__extra"
-          style="color: var(--td-error-color); margin-top: 8px"
-        >
-          {{ errors.personnel }}
-        </div>
       </div>
     </t-card>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { AddIcon, DeleteIcon } from 'tdesign-icons-vue-next'
-import { useFormErrors } from 'vee-validate'
 import { useFilingStore } from '@/stores/filing'
 
 const store = useFilingStore()
 const { formData } = storeToRefs(store)
-const errors = useFormErrors()
 
-// 获取特定行的错误
-const getError = (index: number, field: string) => {
-  return errors.value[`personnel[${index}].${field}`]
-}
+const props = defineProps<{
+  readonly?: boolean
+}>()
 
-const personnelColumns = [
-  { colKey: 'department', title: '院系', width: 110 },
-  { colKey: 'name', title: '姓名', width: 90 },
-  { colKey: 'id', title: '工号/学号', width: 110 },
-  { colKey: 'phone', title: '联系电话', width: 120 },
+// 定义列结构
+const baseColumns = [
+  { colKey: 'department', title: '院系', width: 140 }, // 稍微调宽一点方便输入
+  { colKey: 'name', title: '姓名', width: 100 },
+  { colKey: 'id', title: '工号/学号', width: 130 },
+  { colKey: 'phone', title: '联系电话', width: 140 },
   { colKey: 'content', title: '实验内容', ellipsis: true },
-  { colKey: 'op', title: '操作', width: 60, fixed: 'right' as const },
 ]
+
+// 动态计算列：如果是只读模式，不显示操作列
+const dynamicColumns = computed(() => {
+  if (props.readonly) {
+    return baseColumns
+  }
+  return [
+    ...baseColumns,
+    { colKey: 'op', title: '操作', width: 60, fixed: 'right' as const },
+  ]
+})
+
+// 生成唯一 Key
+const generateId = () => {
+  return Date.now().toString(36) + Math.random().toString(36).substr(2)
+}
 
 const handleAddPerson = () => {
   formData.value.personnel.push({
-    key: crypto.randomUUID(),
+    key: generateId(),
     department: '',
     name: '',
     id: '',

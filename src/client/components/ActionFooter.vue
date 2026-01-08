@@ -8,11 +8,7 @@
         >
           <t-button theme="default" variant="outline" size="large">
             <template #icon>
-              <file-restore-icon
-                :fill-color="'transparent'"
-                :stroke-color="'currentColor'"
-                :stroke-width="2"
-              />
+              <file-restore-icon style="color: inherit" :stroke-width="2" />
             </template>
             重置
           </t-button>

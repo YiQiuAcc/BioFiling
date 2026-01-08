@@ -1,36 +1,69 @@
 <template>
   <div class="filing-container">
-    <t-alert theme="warning" class="mt-4 mb-3">
+    <t-alert :theme="alertTheme" class="mt-4 mb-3">
       <template #icon><info-circle-icon /></template>
-      申报说明：请在线填写并提交，审核通过后需打印系统生成的docx文件
-      <b>一式两份</b>
-      ，签字盖章后提交。
+      {{ alertMessage }}
     </t-alert>
 
-    <t-form label-align="top" class="main-form" scroll-to-first-error="smooth">
+    <t-loading
+      :loading="filingStore.loading"
+      text="正在加载数据..."
+      fullscreen
+    />
+
+    <t-form
+      label-align="top"
+      class="main-form"
+      scroll-to-first-error="smooth"
+      :disabled="isPreviewMode"
+    >
       <section-basic class="section-basic" />
-      <section-personnel class="section-personnel" />
+
+      <section-personnel class="section-personnel" :readonly="isPreviewMode" />
+
       <section-risk class="section-risk" />
       <section-location class="section-location" />
       <section-content class="section-content" />
-      <section-files class="section-files" />
+
+      <section-files class="section-files" :readonly="isPreviewMode" />
     </t-form>
 
     <Teleport to="body">
-      <action-footer @submit="handleFormSubmit" @reset="handleFormReset" />
+      <div v-if="isPreviewMode" class="bottom-action-bar">
+        <div class="action-content" align="right">
+          <t-button theme="default" size="large" @click="router.back()">
+            返回列表
+          </t-button>
+          <t-button
+            theme="primary"
+            size="large"
+            class="ml-2"
+            @click="handleDownload"
+          >
+            <template #icon><download-icon /></template>
+            下载文档
+          </t-button>
+        </div>
+      </div>
+
+      <action-footer
+        v-else
+        @submit="handleFormSubmit"
+        @reset="handleFormReset"
+      />
     </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { nextTick } from 'vue'
+import { computed, nextTick, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { InfoCircleIcon } from 'tdesign-icons-vue-next'
+import { DownloadIcon, InfoCircleIcon } from 'tdesign-icons-vue-next'
 import { useForm } from 'vee-validate'
+import { scrollToFirstError } from '@/utils/filing'
 import { useFilingStore } from '@/stores/filing'
-import router from '@/router/router'
 import ActionFooter from '@/components/ActionFooter.vue'
-// 引入子组件
 import SectionBasic from '@/components/filing/SectionBasic.vue'
 import SectionContent from '@/components/filing/SectionContent.vue'
 import SectionFiles from '@/components/filing/SectionFiles.vue'
@@ -39,129 +72,104 @@ import SectionPersonnel from '@/components/filing/SectionPersonnel.vue'
 import SectionRisk from '@/components/filing/SectionRisk.vue'
 import { formDataSchemaTyped } from '@/types/index'
 
-const filingStore = useFilingStore()
-const { formData } = storeToRefs(filingStore)
-
 // === 初始化表单验证上下文 ===
 const {
   validate,
   setValues,
-  resetForm,
+  resetForm: resetVeeForm,
   errors: _,
 } = useForm({
   validationSchema: formDataSchemaTyped,
 })
 
+// === 初始化数据 ===
+const route = useRoute()
+const router = useRouter()
+const filingStore = useFilingStore()
+const { formData } = storeToRefs(filingStore)
+
+// === 状态判断 ===
+const isEditMode = computed(() => route.name === 'FilingEdit')
+const isPreviewMode = computed(() => route.name === 'FilingPreview')
+
+// === UI文案 ===
+const alertTheme = computed(() => {
+  if (isPreviewMode.value) return 'success'
+  if (isEditMode.value) return 'info'
+  return 'warning'
+})
+
+const alertMessage = computed(() => {
+  if (isPreviewMode.value) return '当前为预览模式，内容不可修改。'
+  if (isEditMode.value) return '当前为编辑模式。修改完成后请点击提交保存。'
+  return '申报说明：请在线填写并提交，审核通过后需打印系统生成的docx文件一式两份，签字盖章后提交。'
+})
+
+// === 初始化 ===
+onMounted(async () => {
+  // 编辑或预览模式都需要加载数据
+  if (isEditMode.value || isPreviewMode.value) {
+    const id = Number(route.params.id)
+    if (!id) return router.replace('/')
+
+    await filingStore.fetchRecordDetail(id)
+    // 预览模式也建议 setValues，虽然不验证，但可以保证内部状态一致
+    setValues(filingStore.formData)
+  } else {
+    filingStore.resetForm()
+  }
+})
+
+// === 预览模式下的下载操作 ===
+const handleDownload = () => {
+  if (filingStore.currentRecord) {
+    filingStore.downloadRecordDoc(
+      filingStore.currentRecord.id,
+      filingStore.formData.projectName,
+    )
+  }
+}
+
 // === 处理提交 ===
 const handleFormSubmit = async () => {
-  // 同步 Pinia 数据
-  filingStore.syncFilesToFormData()
+  // 再次确保 Pinia 数据同步到验证器
   setValues(formData.value)
-
   // 验证
   const result = await validate()
-
   if (result.valid) {
     // === 验证成功 ===
-    const success = await filingStore.triggerSubmit()
+    let success = false
+    // 更新 或 新建
+    if (isEditMode.value) {
+      const id = Number(route.params.id)
+      success = await filingStore.updateRecord(id)
+    } else {
+      success = await filingStore.triggerSubmit()
+    }
     if (success) {
-      // 使用 replace 防止用户点“后退”又回到填表页重复提交
+      // 成功后跳转回列表页
       router.replace('/')
     }
   } else {
     // === 验证失败 ===
     console.log('表单验证失败', result.errors)
-    // 等待 Vue 更新 DOM (显示错误红字) 后再滚动
     await nextTick()
-    // 这里的 result.errors 就是 Record<path, message>
     scrollToFirstError(result.errors)
   }
 }
 
 // === 处理重置 ===
 const handleFormReset = () => {
-  // 重置验证状态
-  resetForm()
-}
-
-// 定义字段与 Section 类的映射关系
-const fieldToSectionMap: Record<string, string> = {
-  // === Basic Section ===
-  leaderName: '.section-basic',
-  leaderId: '.section-basic',
-  department: '.section-basic',
-  title: '.section-basic',
-  phone: '.section-basic',
-  email: '.section-basic',
-  projectName: '.section-basic',
-  projectSource: '.section-basic',
-  projectType: '.section-basic',
-  experimenterCount: '.section-basic',
-
-  // === Personnel Section ===
-  personnel: '.section-personnel', // 数组字段通常是 personnel[0].name
-
-  // === Risk Section ===
-  animalName: '.section-risk',
-  animalStrain: '.section-risk',
-  animalGrade: '.section-risk',
-  pathogenName: '.section-risk',
-  pathogenType: '.section-risk',
-  pathogenSource: '.section-risk',
-  bslLevel: '.section-risk',
-  operationTypes: '.section-risk',
-  isZoonotic: '.section-risk',
-  isHighPathogenic: '.section-risk',
-  hasToxicSubstance: '.section-risk',
-  toxicSubstanceDesc: '.section-risk',
-
-  // === Location Section ===
-  locationType: '.section-location',
-  locationDetail: '.section-location',
-  dateRange: '.section-location',
-
-  // === Content Section ===
-  workProject: '.section-content',
-  experimentMethod: '.section-content',
-  experimentPurpose: '.section-content',
-  disposalMethod: '.section-content',
-  facilityMatchDesc: '.section-content',
-
-  // === Files Section ===
-  certifyExplanation: '.section-files',
-  certifyImagesPath: '.section-files',
-  publicInfoType: '.section-files',
-  publicInfoDesc: '.section-files',
-}
-
-// 滚动到错误位置
-const scrollToFirstError = (errors: Record<string, string | undefined>) => {
-  const keys = Object.keys(errors)
-  if (keys.length === 0) return
-  // 获取第一个错误的字段名
-  const firstErrorKey = keys[0]
-  // 处理数组或嵌套对象的情况
-  const rootKey = firstErrorKey?.split(/[.[]/)[0]
-  if (!rootKey) return
-  // 查找该字段属于哪个 Section
-  const sectionSelector = fieldToSectionMap[rootKey]
-  if (sectionSelector) {
-    const sectionEl = document.querySelector(sectionSelector)
-    if (sectionEl) {
-      // 偏移量
-      const headerOffset = 80
-      const elementPosition = sectionEl.getBoundingClientRect().top
-      const offsetPosition = elementPosition + window.pageYOffset - headerOffset
-
-      window.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth',
-      })
-      return
-    }
+  if (isEditMode.value) {
+    // 编辑模式下重置：重新从服务器拉取原始数据，或者恢复到刚进入页面时的状态
+    const id = Number(route.params.id)
+    filingStore.fetchRecordDetail(id).then(() => {
+      setValues(filingStore.formData)
+    })
+  } else {
+    // 新建模式下重置：清空所有
+    filingStore.resetForm()
+    resetVeeForm()
   }
-  // 如果没有匹配到 Section，尝试滚回顶部
-  console.warn('无法定位错误区域，滚动至顶部', firstErrorKey)
-  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 </script>

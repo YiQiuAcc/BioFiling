@@ -15,29 +15,29 @@ const IMAGE_DEFAULT_HEIGHT = 4
 /**
  * 读取图片并转换为 docx-templates 需要的对象格式
  */
+// docx.service.ts
+
 const getImageDataFromPath = (urlPath: string): DocxTemplateImage | null => {
   if (!urlPath) return null
 
   try {
-    // 安全路径解析
-    const relativePath = urlPath.replace(/^[\/\\]/, '') // 移除开头的 / 或 \
+    const relativePath = urlPath.replace(/^[\/\\]/, '')
     const absolutePath = path.resolve(process.cwd(), relativePath)
 
-    // 确保读取的文件必须在 uploads 目录下
     if (!absolutePath.startsWith(path.resolve(process.cwd(), 'uploads'))) {
       logger.warn(`尝试读取非法目录文件: ${absolutePath}`)
       return null
     }
 
     if (fs.existsSync(absolutePath)) {
-      const ext = path.extname(absolutePath).substring(1).toLowerCase()
+      const ext = path.extname(absolutePath).toLowerCase()
       const buffer = fs.readFileSync(absolutePath)
-
+      const normalizedExt = ext === '.jpg' ? '.jpeg' : ext
       return {
-        width: IMAGE_DEFAULT_WIDTH,
-        height: IMAGE_DEFAULT_HEIGHT,
+        width: 6,
+        height: 4,
         data: buffer,
-        extension: ext === 'jpg' ? 'jpeg' : ext, // 规范化扩展名
+        extension: normalizedExt,
       }
     }
   } catch (e) {
@@ -45,31 +45,80 @@ const getImageDataFromPath = (urlPath: string): DocxTemplateImage | null => {
   }
   return null
 }
+/**
+ * 将日期范围字符串数组拆分为模板需要的年、月、日字段
+ */
+const processDateRange = (dateRange: string[] | undefined) => {
+  const result = {
+    startYear: '    ',
+    startMonth: '  ',
+    startDay: '  ',
+    endYear: '    ',
+    endMonth: '  ',
+    endDay: '  ',
+  }
+
+  if (Array.isArray(dateRange) && dateRange.length >= 2) {
+    // 处理开始时间
+    if (dateRange[0]) {
+      const parts = dateRange[0].split('-') // 假设格式为 YYYY-MM-DD
+      if (parts.length === 3) {
+        result.startYear = parts[0]
+        result.startMonth = parts[1]
+        result.startDay = parts[2]
+      }
+    }
+    // 处理结束时间
+    if (dateRange[1]) {
+      const parts = dateRange[1].split('-')
+      if (parts.length === 3) {
+        result.endYear = parts[0]
+        result.endMonth = parts[1]
+        result.endDay = parts[2]
+      }
+    }
+  }
+
+  return result
+}
 
 /**
- * 数据预处理：将数据库的一维数据转换为模板需要的渲染数据
- * 主要处理：图片路径 -> 图片对象
+ * 数据预处理：将数据库的一维数据转换为模板需要的渲染数据，图片路径 -> 图片对象
  */
 const processDataForTemplate = (
   data: FormDataState | (FormDataState & Record<string, unknown>),
 ): DocxRenderData => {
-  // 浅拷贝避免污染源对象
-  // 使用 unknown 强转是为了兼容 Record<string, any> 但保持内部类型安全
-  const processed = { ...data } as unknown as DocxRenderData
+  // 1. 初始化对象 (这里补上类型定义，防止 TS 报错)
+  const processed = { ...data } as unknown as DocxRenderData & {
+    img?: DocxTemplateImage | null
+  }
 
-  // 处理图片字段
+  // 2. 处理图片字段
   if (
     'certifyImagesPath' in data &&
     Array.isArray(data.certifyImagesPath) &&
     data.certifyImagesPath.length > 0
   ) {
-    // 显式类型断言，确保 map 返回的是 DocxTemplateImage[]
-    processed.certifyImagesPath = data.certifyImagesPath
+    // 读取图片数组
+    const images = data.certifyImagesPath
       .map((p) => getImageDataFromPath(p))
-      .filter((img): img is DocxTemplateImage => img !== null) // Type Guard 过滤 null
+      .filter((img): img is DocxTemplateImage => img !== null)
+
+    // 把处理好的图片数组赋值回去
+    processed.certifyImagesPath = images
+
+    // 将数组的第一张图赋值给 img 变量
+    // 如果数组有图，取第一张；如果没有，设为 null (防止 undefined 报错)
+    processed.img = images.length > 0 ? images[0] : null
   } else {
     processed.certifyImagesPath = []
+    // 没有图片路径时，也要定义 img 为 null
+    processed.img = null
   }
+
+  // 3. 处理日期
+  const dateFields = processDateRange(data.dateRange)
+  Object.assign(processed, dateFields)
 
   return processed
 }
@@ -91,9 +140,8 @@ export const docxService = {
     const buffer = await createReport({
       template,
       data: processedData,
-      cmdDelimiter: ['+++', '+++'], // 保持与你原有逻辑一致
-      failFast: true, // 单文件生成建议开启 failFast，有问题直接报错
-      noSandbox: true, // 性能优化：在 Node 环境如果不涉及非信模板，可关闭沙箱
+      cmdDelimiter: ['+++', '+++'],
+      failFast: true, // 单文件生成有问题直接报错
     })
 
     return Buffer.from(buffer)
@@ -101,7 +149,7 @@ export const docxService = {
 
   /**
    * 创建流式 ZIP
-   * 优化点：批量查询数据库，减少 await 循环中的 IO 等待
+   * 批量查询数据库，减少 await 循环中的 IO 等待
    */
   async createZipStream(recordIds: number[]): Promise<archiver.Archiver> {
     // 创建 archiver 实例

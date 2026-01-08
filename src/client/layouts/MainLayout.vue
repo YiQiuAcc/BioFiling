@@ -35,6 +35,10 @@ import AppHeader from '@/components/AppHeader.vue'
 
 const route = useRoute()
 const appStore = useAppStore()
-// 路由名为 FilingCreate 时才是填报页
-const isFilingForm = computed(() => route.name === 'FilingCreate')
+
+const isFilingForm = computed(() => {
+  return ['FilingCreate', 'FilingEdit', 'FilingPreview'].includes(
+    route.name as string,
+  )
+})
 </script>

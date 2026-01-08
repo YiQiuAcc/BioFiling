@@ -10,14 +10,16 @@
             :tips="errors.certifyImagesPath"
           >
             <t-upload
-              v-model="store.files"
+              v-model="files"
               name="certifyImages"
               action="/api/upload/image"
-              :format-response="store.formatResponse"
-              :onSuccess="store.syncFilesToFormData"
+              :format-response="formatUploadResponse"
+              :onSuccess="handleUploadSuccess"
+              :onRemove="handleUploadSuccess"
               :headers="uploadHeaders"
               theme="image"
               accept="image/*"
+              :readonly="readonly"
               tip="请上传图片，将直接插入到文档中"
             />
           </t-form-item>
@@ -59,16 +61,60 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
+import type { UploadFile } from 'tdesign-vue-next'
 import { useFormErrors } from 'vee-validate'
+import { formatUploadResponse } from '@/utils/filing'
+import { useAuthStore } from '@/stores/auth'
 import { useFilingStore } from '@/stores/filing'
 
 const store = useFilingStore()
 const { formData } = storeToRefs(store)
+const authStore = useAuthStore()
 const errors = useFormErrors()
 
-// 为上传请求添加认证头部
+// === 在组件内管理 files 状态 ===
+const files = ref<UploadFile[]>([])
+
+const props = defineProps<{
+  readonly?: boolean
+}>()
+
+// === 同步逻辑 ===
+const handleUploadSuccess = () => {
+  const paths: string[] = []
+  files.value.forEach((file) => {
+    // 处理新上传的文件
+    if (file.response && file.status === 'success') {
+      const resp = file.response as any
+      if (resp.dbPath) paths.push(resp.dbPath)
+    }
+    // 处理已存在的文件 (如果是编辑回显的情况)
+    else if (file.url) {
+      paths.push(file.url) // 或者你需要解析出相对路径
+    }
+  })
+  // 更新 Store 中的 formData
+  formData.value.certifyImagesPath = paths
+}
+onMounted(() => {
+  // 监听 formData.certifyImagesPath 的变化，将图片 URL 转换为 UploadFile 对象
+  watch(
+    () => formData.value.certifyImagesPath,
+    (paths) => {
+      if (paths && paths.length > 0 && files.value.length === 0) {
+        files.value = paths.map((p) => ({
+          name: '已上传图片',
+          url: p,
+          status: 'success',
+        }))
+      }
+    },
+    { immediate: true },
+  )
+})
 const uploadHeaders = {
-  Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+  Authorization: `Bearer ${authStore.token}`,
 }
 </script>

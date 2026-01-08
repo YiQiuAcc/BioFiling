@@ -12,19 +12,30 @@ const routes = [
     children: [
       {
         path: '',
-        name: 'Dashboard', // 首页
+        name: 'Dashboard',
         component: HomeView,
         meta: { requiresAuth: true },
       },
       {
-        path: 'create', // 填报页
+        path: 'create',
         name: 'FilingCreate',
+        component: FilingFormView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'edit/:id',
+        name: 'FilingEdit',
+        component: FilingFormView,
+        meta: { requiresAuth: true },
+      },
+      {
+        path: 'preview/:id',
+        name: 'FilingPreview',
         component: FilingFormView,
         meta: { requiresAuth: true },
       },
     ],
   },
-  // 404
   {
     path: '/:pathMatch(.*)*',
     name: 'not-found',

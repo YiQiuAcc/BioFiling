@@ -12,14 +12,22 @@ interface LoginResponse {
   user: User
 }
 
+// 列表用的记录
 interface FilingRecord {
+  id: number
+  projectName: string
   leaderName: string | null
   department: string | null
-  projectName: string
   status: string
-  id: number
-  createdAt: Date
+  submitterName?: string
+  auditComment?: string
+  createdAt: string
+  updatedAt?: string
 }
+
+// 详情用的完整记录
+// 包含系统字段，表单字段
+type FilingDetail = FilingRecord & FormDataState
 
 interface ApiResponse<T = void> {
   message: string
@@ -42,6 +50,8 @@ interface DocxTemplateImage {
   data: Buffer | string // Base64 或 Buffer
   extension: string
 }
+
+type filingStatus = 'SUBMITTED' | 'APPROVED' | 'REJECTED'
 
 type DocxRenderData = Omit<FormDataState, 'certifyImagesPath'> & {
   certifyImagesPath?: DocxTemplateImage[] // 变为图片对象数组
@@ -66,6 +76,8 @@ export type {
   ApiResponse,
   ImageUploadResponse,
   FilingRecord,
+  FilingDetail,
+  filingStatus,
   DocxTemplateImage,
   DocxRenderData,
 }

@@ -1,10 +1,11 @@
-import fs from 'fs'
+import fs from 'fs/promises'
 import path from 'path'
+import logger from '@/utils/logger'
 import { prisma } from '@/utils/prisma'
 import { InputJsonValue } from '@/generated/internal/prismaNamespace'
-import { FormDataSchemaType } from '@/types'
+import { FormDataSchemaType, FormDataState } from '@/types'
 
-// 获取正式存储的日期目录 (YYYY/MM)
+// 常量：日期目录
 const getDateDir = () => {
   const now = new Date()
   const year = now.getFullYear()
@@ -12,121 +13,153 @@ const getDateDir = () => {
   return path.join(year.toString(), month)
 }
 
-// 将临时路径移动到正式路径
-const moveFileFromTempToFinal = (tempUrlOrPath: string): string => {
+// 优化：纯异步移动文件，不再使用 fsSync
+const moveFileFromTempToFinal = async (
+  tempUrlOrPath: string,
+): Promise<string> => {
   if (!tempUrlOrPath) return tempUrlOrPath
-
-  // 解析路径
-  // 前端传回 URL: "/uploads/temp/xxx.jpg" 或 Windows 路径 "uploads\temp\xxx.jpg"
-  // 提取文件名
   const fileName = path.basename(tempUrlOrPath)
-
-  // 检查源文件是否存在于 temp 目录
+  // 假设 temp 目录就在 uploads/temp
   const tempPath = path.resolve(process.cwd(), 'uploads', 'temp', fileName)
 
-  if (!fs.existsSync(tempPath)) {
-    // 如果临时文件不存在，可能已经是正式文件（编辑模式），或者路径错误，直接返回原值
-    return tempUrlOrPath
-  }
-
   try {
-    // 准备目标目录 (uploads/2026/01)
-    const dateDir = getDateDir() // 获取 '2026/01'
+    // 检查临时文件是否存在 (access 失败会抛出异常)
+    await fs.access(tempPath)
+
+    const dateDir = getDateDir()
     const finalDir = path.resolve(process.cwd(), 'uploads', dateDir)
 
-    if (!fs.existsSync(finalDir)) {
-      fs.mkdirSync(finalDir, { recursive: true })
-    }
-
-    // 移动文件
+    await fs.mkdir(finalDir, { recursive: true })
     const finalPath = path.join(finalDir, fileName)
-    fs.renameSync(tempPath, finalPath)
 
-    // 返回存入数据库的新相对路径 (Web 格式: /uploads/2026/01/xxx.jpg)
-    // 统一使用 POSIX 风格的斜杠
-    const webPath = `/uploads/${dateDir.split(path.sep).join('/')}/${fileName}`
-    return webPath
+    await fs.rename(tempPath, finalPath)
+    // 返回标准化的 Web 路径
+    return `/uploads/${dateDir.split(path.sep).join('/')}/${fileName}`
   } catch (e) {
-    console.error(`移动文件失败 ${fileName}:`, e)
-    return tempUrlOrPath // 失败则保留原样，避免数据丢失
+    // 如果文件不存在或移动失败，记录日志但返回原路径（避免破坏数据完整性）
+    // 仅当不是 "文件不存在" 错误时记录 Error
+    if ((e as NodeJS.ErrnoException).code !== 'ENOENT') {
+      logger.error(`移动文件失败 ${fileName}:`, e)
+    }
+    return tempUrlOrPath
   }
+}
+
+const processFormDataFiles = async (data: FormDataSchemaType) => {
+  const processed = { ...data }
+  if (
+    Array.isArray(processed.certifyImagesPath) &&
+    processed.certifyImagesPath.length > 0
+  ) {
+    processed.certifyImagesPath = await Promise.all(
+      processed.certifyImagesPath.map((p) => moveFileFromTempToFinal(p)),
+    )
+  }
+  return processed
 }
 
 export const filingService = {
   /**
-   * 创建备案记录
+   * 统一权限检查辅助函数
    */
+  async checkAccess(
+    recordId: number,
+    user: { netId: string; isAdmin?: boolean },
+  ) {
+    const record = await prisma.forms.findUnique({ where: { id: recordId } })
+    if (!record) throw new Error('记录不存在')
+
+    if (!user.isAdmin && record.submitterId !== user.netId) {
+      throw new Error('无权操作此记录')
+    }
+    return record
+  },
+
   async createRecord(
-    data: FormDataSchemaType, // 经过 Zod 验证后的数据
+    data: FormDataSchemaType,
     submitter: { netId: string; name: string },
   ) {
-    // 拷贝一份数据进行处理，避免修改原始对象
-    const processedData = { ...data }
-
-    // === 处理图片字段移动 ===
-    // 处理数组类型的图片 (certifyImagesPath)
-    if (
-      Array.isArray(processedData.certifyImagesPath) &&
-      processedData.certifyImagesPath.length > 0
-    ) {
-      processedData.certifyImagesPath = processedData.certifyImagesPath.map(
-        (p: string) => moveFileFromTempToFinal(p),
-      )
-    }
-    // 如果只有单张图片字段，也可以这样处理
-    // if (processedData.otherImage) {
-    //   processedData.otherImage = moveFileFromTempToFinal(processedData.otherImage);
-    // }
-
-    // === 提取索引字段 ===
-    const { projectName, department, leaderName } = processedData
-
-    // === 写入数据库 ===
+    const processedData = await processFormDataFiles(data)
     return await prisma.forms.create({
       data: {
-        projectName: projectName || '未命名备案',
-        department: department || '',
-        leaderName: leaderName || '',
+        projectName: processedData.projectName || '未命名备案',
+        department: processedData.department || '',
+        leaderName: processedData.leaderName || '',
         status: 'SUBMITTED',
-
-        // 存入处理过路径（指向正式目录）的数据
         content: processedData as InputJsonValue,
-
         submitterId: submitter.netId,
         submitterName: submitter.name,
       },
     })
   },
 
-  /**
-   * 获取某个用户的提交历史
-   */
+  async updateRecord(
+    id: number,
+    data: FormDataSchemaType,
+    operatorNetId: string,
+    isAdmin: boolean,
+  ) {
+    const record = await prisma.forms.findUnique({ where: { id } })
+    if (!record) throw new Error('记录不存在')
+
+    // 权限校验
+    if (!isAdmin) {
+      if (record.submitterId !== operatorNetId)
+        throw new Error('无权修改此记录')
+      if (record.status === 'APPROVED')
+        throw new Error('已通过审核的记录无法修改')
+    }
+
+    const processedData = await processFormDataFiles(data)
+
+    return await prisma.forms.update({
+      where: { id },
+      data: {
+        projectName: processedData.projectName,
+        department: processedData.department,
+        leaderName: processedData.leaderName,
+        // 若被驳回，修改后自动重置为 "SUBMITTED"
+        status: record.status === 'REJECTED' ? 'SUBMITTED' : record.status,
+        content: processedData as InputJsonValue,
+      },
+    })
+  },
+
   async getUserRecords(netId: string) {
     return await prisma.forms.findMany({
-      where: {
-        submitterId: netId,
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-      // 仅选择列表需要的字段，避免加载庞大的 content JSON
+      where: { submitterId: netId },
+      orderBy: { createdAt: 'desc' },
       select: {
         id: true,
         projectName: true,
         department: true,
         leaderName: true,
+        submitterName: true,
+        submitterId: true,
         status: true,
         createdAt: true,
+        auditComment: true,
       },
     })
   },
 
-  /**
-   * (管理员) 获取所有记录
-   */
-  async getAllRecords() {
+  async getAllRecords(params: { keyword?: string; status?: string } = {}) {
+    const { keyword, status } = params
+    const whereClause: any = {}
+
+    if (status) whereClause.status = status
+    if (keyword) {
+      whereClause.OR = [
+        { projectName: { contains: keyword } },
+        { submitterName: { contains: keyword } },
+        { submitterId: { contains: keyword } },
+      ]
+    }
+
     return await prisma.forms.findMany({
+      where: whereClause,
       orderBy: { createdAt: 'desc' },
+      // 列表页只查必要字段
       select: {
         id: true,
         projectName: true,
@@ -140,28 +173,63 @@ export const filingService = {
     })
   },
 
-  /**
-   * 删除记录
-   */
   async deleteRecord(id: number, operatorNetId: string, isAdmin: boolean) {
-    const record = await prisma.forms.findUnique({ where: { id } })
-
-    if (!record) {
-      throw new Error('记录不存在')
-    }
-
-    // 权限校验：只有管理员或本人可以删除
-    if (!isAdmin && record.submitterId !== operatorNetId) {
-      throw new Error('无权删除此记录')
-    }
-
+    // 复用 checkAccess 进行存在性和权限检查
+    await this.checkAccess(id, { netId: operatorNetId, isAdmin })
     return await prisma.forms.delete({ where: { id } })
   },
 
-  /**
-   * 获取单条详情 (用于重新生成文档与查看)
-   */
   async getRecordById(id: number) {
     return await prisma.forms.findUnique({ where: { id } })
+  },
+
+  /**
+   * 专门用于生成 Word 文档的数据准备方法
+   * 将 Controller 中的数据组装逻辑移到这里
+   */
+  async getDownloadData(
+    id: number,
+    user: { netId: string; isAdmin?: boolean },
+  ) {
+    const record = await this.checkAccess(id, user)
+
+    // 类型安全转换
+    const formData = (record.content || {}) as unknown as FormDataState
+
+    // 组装渲染数据
+    const renderData = {
+      ...formData,
+      systemId: String(record.id).padStart(6, '0'),
+      submitterName: record.submitterName,
+      // 拆分日期供模板使用
+      year: record.createdAt.getFullYear(),
+      month: record.createdAt.getMonth() + 1, // 月份注意 +1
+      day: record.createdAt.getDate(),
+      // 也可以在这里处理 checkbox 的逻辑，如果模板逻辑太复杂的话
+    }
+
+    return {
+      filename: record.projectName || '备案表',
+      data: renderData,
+    }
+  },
+
+  async auditRecord(
+    id: number,
+    status: 'APPROVED' | 'REJECTED',
+    comment?: string,
+  ) {
+    // 确保记录存在
+    const record = await prisma.forms.findUnique({ where: { id } })
+    if (!record) throw new Error('记录不存在')
+
+    return await prisma.forms.update({
+      where: { id },
+      data: {
+        status,
+        auditComment: comment || null,
+        updatedAt: new Date(),
+      },
+    })
   },
 }

@@ -2,7 +2,7 @@
   <div id="section-risk" class="form-section">
     <t-card title="实验对象与风险" :bordered="false" header-bordered>
       <div class="sub-header">
-        <icon-font name="control-platform" style="margin-right: 8px" />
+        <logo-gitlab-icon style="margin-right: 8px" />
         实验动物
       </div>
       <t-row :gutter="[24, 24]">
@@ -41,7 +41,7 @@
       <t-divider dashed style="margin: 32px 0"></t-divider>
 
       <div class="sub-header">
-        <icon-font name="bug" style="margin-right: 8px" />
+        <bug-icon style="margin-right: 8px" />
         病原微生物
       </div>
       <t-row :gutter="[24, 24]">
@@ -157,7 +157,7 @@
 
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
-import { IconFont } from 'tdesign-icons-vue-next'
+import { BugIcon, LogoGitlabIcon } from 'tdesign-icons-vue-next'
 import { useFormErrors } from 'vee-validate'
 import { useFilingStore } from '@/stores/filing'
 import { ANIMAL_GRADES, BSL_LEVELS, OPERATION_TYPES } from '@/constants'
