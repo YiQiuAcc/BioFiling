@@ -29,25 +29,8 @@
     </t-form>
 
     <Teleport to="body">
-      <div v-if="isPreviewMode" class="bottom-action-bar">
-        <div class="action-content" align="right">
-          <t-button theme="default" size="large" @click="router.back()">
-            返回列表
-          </t-button>
-          <t-button
-            theme="primary"
-            size="large"
-            class="ml-2"
-            @click="handleDownload"
-          >
-            <template #icon><download-icon /></template>
-            下载文档
-          </t-button>
-        </div>
-      </div>
-
       <action-footer
-        v-else
+        :isPreviewMode="isPreviewMode"
         @submit="handleFormSubmit"
         @reset="handleFormReset"
       />
@@ -59,7 +42,7 @@
 import { computed, nextTick, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { DownloadIcon, InfoCircleIcon } from 'tdesign-icons-vue-next'
+import { InfoCircleIcon } from 'tdesign-icons-vue-next'
 import { useForm } from 'vee-validate'
 import { scrollToFirstError } from '@/utils/filing'
 import { useFilingStore } from '@/stores/filing'
@@ -119,16 +102,6 @@ onMounted(async () => {
     filingStore.resetForm()
   }
 })
-
-// === 预览模式下的下载操作 ===
-const handleDownload = () => {
-  if (filingStore.currentRecord) {
-    filingStore.downloadRecordDoc(
-      filingStore.currentRecord.id,
-      filingStore.formData.projectName,
-    )
-  }
-}
 
 // === 处理提交 ===
 const handleFormSubmit = async () => {

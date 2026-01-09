@@ -9,18 +9,6 @@
         </div>
       </div>
       <div class="header-actions">
-        <t-button
-          v-if="authStore.isAdmin"
-          theme="default"
-          variant="outline"
-          size="large"
-          @click="handleBatchExport"
-          :loading="exporting"
-        >
-          <template #icon><download-icon /></template>
-          批量导出备案表
-        </t-button>
-
         <t-switch
           size="large"
           :value="appStore.isDarkMode"
@@ -35,6 +23,31 @@
         <t-tag theme="primary" variant="outline" size="large" shape="round">
           {{ currentYear }} 年度
         </t-tag>
+
+        <t-button
+          v-if="authStore.isAdmin"
+          theme="default"
+          variant="outline"
+          size="medium"
+          @click="handleBatchExport"
+          :loading="exporting"
+        >
+          <template #icon><download-icon /></template>
+          批量导出备案表
+        </t-button>
+
+        <t-button
+          v-if="authStore.isLoggedIn"
+          theme="default"
+          variant="outline"
+          size="medium"
+          @click="handleLogout"
+        >
+          <template #icon>
+            <poweroff-icon />
+          </template>
+          退出登录
+        </t-button>
       </div>
     </div>
   </header>
@@ -43,7 +56,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { DownloadIcon, MoonIcon, SunnyIcon } from 'tdesign-icons-vue-next'
+import {
+  DownloadIcon,
+  MoonIcon,
+  PoweroffIcon,
+  SunnyIcon,
+} from 'tdesign-icons-vue-next'
 import { useAppStore } from '@/stores/app'
 import { useAuthStore } from '@/stores/auth'
 import { downloadBlob, filingAPI } from '@/api'
@@ -53,23 +71,27 @@ const appStore = useAppStore()
 const exporting = ref(false)
 
 const authStore = useAuthStore()
+
+// 退出登录处理函数
+const handleLogout = () => {
+  authStore.logout()
+}
+
 // 批量导出
 const handleBatchExport = async () => {
   if (!authStore.isAdmin) return
   exporting.value = true
   try {
     const response = await filingAPI.exportAll()
-
     let filename = `生物安全备案汇总_${currentYear}.zip`
     const disposition = response.headers['content-disposition']
     if (disposition && disposition.indexOf('filename*=') !== -1) {
       filename = decodeURIComponent(disposition.split("filename*=utf-8''")[1])
     }
-
-    downloadBlob(response.data, filename)
+    downloadBlob(response, filename)
     MessagePlugin.success('批量导出成功')
   } catch (error) {
-    console.error(error)
+    console.error('导出错误:', error)
     MessagePlugin.error('导出失败，请检查权限')
   } finally {
     exporting.value = false

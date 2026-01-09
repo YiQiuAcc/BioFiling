@@ -1,4 +1,3 @@
-// controllers/filing.controller.ts
 import { ZodError, ZodIssue } from 'zod'
 import { Request, Response } from 'express'
 import logger from '@/utils/logger'
@@ -8,9 +7,6 @@ import type { ApiResponse, FilingDetail, FilingRecord } from '@/types'
 import { formDataSchema } from '../../shared/validation/validation.schemas'
 
 // 确保路径正确
-
-// --- 辅助函数 ---
-
 const parseId = (req: Request): number => {
   const id = Number(req.params.id)
   if (isNaN(id)) throw new Error('INVALID_ID')
@@ -68,7 +64,6 @@ export const downloadRecord = async (req: Request, res: Response) => {
     const id = parseId(req)
     const user = req.user!
 
-    // 逻辑下沉到 Service，获取处理好的数据
     const { filename, data } = await filingService.getDownloadData(id, {
       netId: user.netId,
       isAdmin: user.isAdmin,
@@ -95,9 +90,7 @@ export const downloadRecord = async (req: Request, res: Response) => {
 export const getMyRecords = async (req: Request, res: Response) => {
   try {
     const rawRecords = await filingService.getUserRecords(req.user!.netId)
-
-    // 解决类型报错：创建一个新对象返回给前端，而不是修改原对象
-    // 这样类型推断会根据返回值自动生成，或者显式定义 ViewModel
+    // 创建一个新对象返回给前端
     const viewModels = rawRecords.map((record) => ({
       ...record,
       createdAt: record.createdAt.toLocaleString('zh-CN', { hour12: false }), // 转换为字符串
@@ -129,7 +122,6 @@ export const deleteRecord = async (req: Request, res: Response) => {
 export const getRecordDetail = async (req: Request, res: Response) => {
   try {
     const id = parseId(req)
-    // 复用 Service 的 checkAccess 逻辑来获取记录并校验权限
     const record = await filingService.checkAccess(id, {
       netId: req.user!.netId,
       isAdmin: req.user!.isAdmin,
@@ -152,18 +144,16 @@ export const getRecordDetail = async (req: Request, res: Response) => {
       leaderName: record.leaderName,
     }
 
-    res
-      .status(200)
-      .json({
-        message: '获取详情成功',
-        data: flattenedRecord,
-      } as unknown as ApiResponse<FilingDetail>)
+    res.status(200).json({
+      message: '获取详情成功',
+      data: flattenedRecord,
+    } as unknown as ApiResponse<FilingDetail>)
   } catch (e) {
     handleError(res, e, 'Get Detail')
   }
 }
 
-export const update = async (req: Request, res: Response) => {
+export const updateRecord = async (req: Request, res: Response) => {
   try {
     const id = parseId(req)
     const user = req.user!

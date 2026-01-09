@@ -184,30 +184,42 @@ export const filingService = {
   },
 
   /**
-   * 专门用于生成 Word 文档的数据准备方法
-   * 将 Controller 中的数据组装逻辑移到这里
+   * 数据格式化, 将数据库记录转换为 Word 模板需要的扁平化数据结构
+   * 供 单个下载 和 批量下载 共同使用，确保数据一致性
+   */
+  formatRecordForDocx(record: {
+    id: number
+    projectName: string | null
+    submitterName: string | null
+    createdAt: Date
+    content: InputJsonValue | null
+  }) {
+    // 类型安全转换
+    const formData = (record.content || {}) as unknown as FormDataState
+    // 组装渲染数据
+    return {
+      ...formData,
+      systemId: String(record.id).padStart(6, '0'),
+      submitterName: record.submitterName || '',
+      projectName: record.projectName || '未命名',
+      // 统一拆分日期供模板使用
+      year: record.createdAt.getFullYear(),
+      month: record.createdAt.getMonth() + 1,
+      day: record.createdAt.getDate(),
+      // 格式化完整日期字符串
+      submitDate: record.createdAt.toLocaleDateString('zh-CN'),
+    }
+  },
+
+  /**
+   * 专门用于生成 Word 文档的数据准备方法 (单个下载)
    */
   async getDownloadData(
     id: number,
     user: { netId: string; isAdmin?: boolean },
   ) {
     const record = await this.checkAccess(id, user)
-
-    // 类型安全转换
-    const formData = (record.content || {}) as unknown as FormDataState
-
-    // 组装渲染数据
-    const renderData = {
-      ...formData,
-      systemId: String(record.id).padStart(6, '0'),
-      submitterName: record.submitterName,
-      // 拆分日期供模板使用
-      year: record.createdAt.getFullYear(),
-      month: record.createdAt.getMonth() + 1, // 月份注意 +1
-      day: record.createdAt.getDate(),
-      // 也可以在这里处理 checkbox 的逻辑，如果模板逻辑太复杂的话
-    }
-
+    const renderData = this.formatRecordForDocx(record)
     return {
       filename: record.projectName || '备案表',
       data: renderData,

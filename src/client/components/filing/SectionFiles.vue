@@ -26,6 +26,20 @@
         </t-col>
         <t-col :span="12" :md="12" :xs="24">
           <t-form-item
+            label="证明文件说明"
+            name="certifyExplanation"
+            :status="errors.certifyExplanation ? 'error' : 'success'"
+            :tips="errors.certifyExplanation"
+          >
+            <t-textarea
+              v-model="formData.certifyExplanation"
+              placeholder="请简要说明上传的证明文件内容（如伦理审查批件、资格证书等）"
+              :autosize="{ minRows: 2 }"
+            />
+          </t-form-item>
+        </t-col>
+        <t-col :span="12" :md="12" :xs="24">
+          <t-form-item
             label="信息公开设置"
             name="publicInfoType"
             :status="errors.publicInfoType ? 'error' : 'success'"
@@ -109,6 +123,9 @@ onMounted(() => {
           url: p,
           status: 'success',
         }))
+      }
+      if (formData.value.certifyImagesPath.length === 0) {
+        files.value = []
       }
     },
     { immediate: true },

@@ -2,7 +2,7 @@
   <div id="section-location" class="form-section">
     <t-card title="地点与时间" :bordered="false" header-bordered>
       <t-row :gutter="[24, 24]">
-        <t-col :span="14" :md="14" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="实验地点"
             name="locationDetail"
@@ -28,7 +28,7 @@
             </t-input-group>
           </t-form-item>
         </t-col>
-        <t-col :span="10" :md="10" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="拟开展时间"
             name="dateRange"

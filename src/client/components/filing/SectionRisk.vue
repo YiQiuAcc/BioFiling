@@ -6,7 +6,7 @@
         实验动物
       </div>
       <t-row :gutter="[24, 24]">
-        <t-col :span="8" :md="8" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="动物名称"
             name="animalName"
@@ -19,7 +19,7 @@
             />
           </t-form-item>
         </t-col>
-        <t-col :span="8" :md="8" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item label="品种品系" name="animalStrain">
             <t-input
               v-model="formData.animalStrain"
@@ -27,7 +27,7 @@
             />
           </t-form-item>
         </t-col>
-        <t-col :span="8" :md="8" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item label="动物等级" name="animalGrade">
             <t-select
               v-model="formData.animalGrade"
@@ -69,7 +69,7 @@
           </t-form-item>
         </t-col>
 
-        <t-col :span="24" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item label="来源 (Source)" name="pathogenSource">
             <t-input
               v-model="formData.pathogenSource"
@@ -125,7 +125,7 @@
           </div>
         </t-col>
 
-        <t-col :span="24" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item label="是否使用有毒/害物质" name="hasToxicSubstance">
             <div class="expandable-section" style="width: 100%">
               <div class="switch-row">
@@ -143,7 +143,6 @@
                   v-model="formData.toxicSubstanceDesc"
                   placeholder="请详细说明使用情况（感染、放射、化学毒等）"
                   class="mt-3"
-                  :status="errors.toxicSubstanceDesc ? 'error' : 'success'"
                   :tips="errors.toxicSubstanceDesc"
                 />
               </transition>

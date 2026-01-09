@@ -17,17 +17,18 @@ interface FormDataState {
   phone: string
   email: string
   projectName: string
+  projectCode: string
   projectSource: string
-  projectType: string
+  projectType: '教学' | '科研' | '其他'
   experimenterCount: number
   personnel: Personnel[]
   animalName: string
   animalStrain: string
   animalGrade: string
   pathogenName: string
-  pathogenType: string
+  pathogenType: '动物' | '植物' | '微生物' | '其他'
   pathogenSource: string
-  bslLevel: string
+  bslLevel: 'BSL-1' | 'BSL-2' | 'BSL-3' | 'BSL-4'
   operationTypes: string[]
   isZoonotic: boolean
   isHighPathogenic: boolean

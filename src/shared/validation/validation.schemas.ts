@@ -36,6 +36,9 @@ export const formDataSchema = z
     projectName: z
       .string({ required_error: '' })
       .min(1, { message: '项目名称不能为空' }),
+    projectCode: z
+      .string({ required_error: '' })
+      .min(1, { message: '项目编号不能为空' }),
     projectSource: z
       .string({ required_error: '' })
       .min(1, { message: '项目来源不能为空' }),
@@ -107,8 +110,8 @@ export const formDataSchema = z
       .string({ required_error: '' })
       .min(1, { message: '设施设备匹配情况不能为空' }),
 
-    // --- 补充文件 (SectionFiles) ---
-    certifyExplanation: z.string(),
+    // --- 补充文件  ---
+    certifyExplanation: z.string({ required_error: '' }),
     // 必须上传文件
     certifyImagesPath: z
       .array(z.string(), { required_error: '' })

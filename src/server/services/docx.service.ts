@@ -6,6 +6,7 @@ import logger from '@/utils/logger'
 import { prisma } from '@/utils/prisma'
 import { FormDataState, Personnel } from '@/types'
 import { DocxRenderData, DocxTemplateImage } from '@/types'
+import { filingService } from './filing.service'
 
 // 常量定义
 const TEMPLATE_FILENAME = 'template.docx'
@@ -88,12 +89,12 @@ const processDateRange = (dateRange: string[] | undefined) => {
 const processDataForTemplate = (
   data: FormDataState | (FormDataState & Record<string, unknown>),
 ): DocxRenderData => {
-  // 1. 初始化对象 (这里补上类型定义，防止 TS 报错)
+  // 初始化对象
   const processed = { ...data } as unknown as DocxRenderData & {
     img?: DocxTemplateImage | null
   }
 
-  // 2. 处理图片字段
+  // 处理图片字段
   if (
     'certifyImagesPath' in data &&
     Array.isArray(data.certifyImagesPath) &&
@@ -116,7 +117,7 @@ const processDataForTemplate = (
     processed.img = null
   }
 
-  // 3. 处理日期
+  // 处理日期
   const dateFields = processDateRange(data.dateRange)
   Object.assign(processed, dateFields)
 
@@ -167,7 +168,7 @@ export const docxService = {
     // 后台异步处理
     ;(async () => {
       try {
-        // 批量查询, 如果 id 数量极大（如几千个），这里可能需要分批 (chunk) 查询
+        // 批量查询
         const records = await prisma.forms.findMany({
           where: {
             id: { in: recordIds },
@@ -183,23 +184,10 @@ export const docxService = {
         for (const record of records) {
           try {
             if (!record.content) continue
-
-            // 强类型转换,数据库里的 content 符合 FormDataState 结构
-            const formData = record.content as unknown as FormDataState
-
-            // 注入系统数据
-            const renderData: FormDataState &
-              Record<
-                string,
-                string | string[] | number | Personnel[] | boolean
-              > = {
-              ...formData,
-              systemId: String(record.id).padStart(6, '0'),
-              submitDate: record.createdAt.toLocaleDateString('zh-CN'),
-              submitterName: record.submitterName || '',
-            }
-
-            const finalData = processDataForTemplate(renderData)
+            // 使用 filingService 统一的数据格式化逻辑
+            // 确保获得与单个下载一致的 systemId, year, month, day 等字段
+            const formattedBaseData = filingService.formatRecordForDocx(record)
+            const finalData = processDataForTemplate(formattedBaseData)
 
             // 生成 Word Buffer
             const wordBuffer = await createReport({

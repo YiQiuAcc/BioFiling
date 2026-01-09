@@ -34,7 +34,7 @@ export const getDefaultFormData = (): FormDataState => ({
   pathogenName: '',
   pathogenType: '微生物',
   pathogenSource: '',
-  bslLevel: '',
+  bslLevel: 'BSL-2',
   operationTypes: [],
   isZoonotic: false,
   isHighPathogenic: false,
@@ -52,6 +52,7 @@ export const getDefaultFormData = (): FormDataState => ({
   publicInfoDesc: '',
   certifyExplanation: '',
   certifyImagesPath: [],
+  projectCode: '',
 })
 
 // === TDesign 上传组件格式化工具 ===

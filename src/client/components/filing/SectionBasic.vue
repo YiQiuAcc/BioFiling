@@ -72,6 +72,8 @@
             <t-input v-model="formData.email" />
           </t-form-item>
         </t-col>
+        <t-divider />
+        <div class="sub-header">项目内容</div>
         <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="项目名称"
@@ -82,7 +84,21 @@
             <t-input v-model="formData.projectName" />
           </t-form-item>
         </t-col>
-        <t-col :span="6" :md="6" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
+          <t-form-item
+            label="项目编号"
+            name="projectCode"
+            :status="errors.projectCode ? 'error' : 'success'"
+            :tips="errors.projectCode"
+          >
+            <t-input
+              v-model="formData.projectCode"
+              placeholder="请输入项目编号"
+            />
+          </t-form-item>
+        </t-col>
+
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="项目来源"
             name="projectSource"
@@ -100,6 +116,22 @@
             :tips="errors.projectType"
           >
             <t-select v-model="formData.projectType" :options="PROJECT_TYPES" />
+          </t-form-item>
+        </t-col>
+        <t-col :span="6" :md="6" :xs="24">
+          <t-form-item
+            label="实验人数"
+            name="experimenterCount"
+            :status="errors.experimenterCount ? 'error' : 'success'"
+            :tips="errors.experimenterCount"
+          >
+            <t-input-number
+              v-model="formData.experimenterCount"
+              :min="1"
+              theme="column"
+              style="width: 100%"
+              placeholder="请输入人数"
+            />
           </t-form-item>
         </t-col>
       </t-row>

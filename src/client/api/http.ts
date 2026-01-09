@@ -30,8 +30,9 @@ http.interceptors.request.use(
 // === 响应拦截器 ===
 http.interceptors.response.use(
   (response: AxiosResponse) => {
-    // 可在这里直接解包 response.data
-    // 但为保留 headers (用于文件名)，返回完整 response
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     return response
   },
   (error) => {
@@ -53,29 +54,58 @@ export const downloadBlob = (
   originFilename: string = '下载文件',
 ) => {
   const { data, headers } = response
-
+  if (!headers) {
+    console.warn('响应头为空，使用默认文件名')
+    return downloadWithDefaultName(data, originFilename)
+  }
   // 尝试从 Content-Disposition 获取文件名
   let filename = originFilename
-  const disposition = headers['content-disposition']
+
+  const disposition =
+    headers['content-disposition'] || headers['Content-Disposition']
+
   if (disposition) {
-    // 匹配 filename="xxx" 或 filename*=utf-8''xxx
-    const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/
-    const matches = filenameRegex.exec(disposition)
-    if (matches != null && matches[1]) {
-      filename = decodeURIComponent(
-        matches[1].replace(/['"]/g, '').replace("utf-8''", ''),
-      )
+    // 优先匹配 filename*=utf-8''
+    const utf8Match = disposition.match(/filename\*=utf-8''([^;]+)/i)
+    if (utf8Match?.[1]) {
+      filename = decodeURIComponent(utf8Match[1])
+    } else {
+      // 匹配 filename="xxx"
+      const quotedMatch = disposition.match(/filename="([^"]+)"/i)
+      if (quotedMatch?.[1]) {
+        filename = decodeURIComponent(quotedMatch[1])
+      }
     }
   }
 
+  // 下载文件
   const url = window.URL.createObjectURL(new Blob([data]))
   const link = document.createElement('a')
   link.href = url
   link.setAttribute('download', filename)
   document.body.appendChild(link)
   link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
+
+  // 延迟清理
+  setTimeout(() => {
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, 100)
+}
+
+// 使用默认文件名的辅助函数
+const downloadWithDefaultName = (data: Blob, filename: string) => {
+  const url = window.URL.createObjectURL(data)
+  const link = document.createElement('a')
+  link.href = url
+  link.setAttribute('download', filename)
+  document.body.appendChild(link)
+  link.click()
+
+  setTimeout(() => {
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+  }, 100)
 }
 
 export default http

@@ -2,7 +2,7 @@
   <div id="section-content" class="form-section">
     <t-card title="设施与内容" :bordered="false" header-bordered>
       <t-row :gutter="[24, 24]">
-        <t-col :span="24" :md="12" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="主要工作项目"
             name="workProject"
@@ -11,8 +11,7 @@
           >
             <t-textarea
               v-model="formData.workProject"
-              :autosize="{ minRows: 3 }"
-              placeholder="请填写..."
+              :autosize="{ minRows: 4 }"
             />
           </t-form-item>
         </t-col>
@@ -42,7 +41,7 @@
             />
           </t-form-item>
         </t-col>
-        <t-col :span="24" :md="12" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="设施匹配性描述"
             name="facilityMatchDesc"
@@ -56,7 +55,7 @@
             />
           </t-form-item>
         </t-col>
-        <t-col :span="24" :md="12" :xs="24">
+        <t-col :span="12" :md="12" :xs="24">
           <t-form-item
             label="保存及污染物处理方法"
             name="disposalMethod"

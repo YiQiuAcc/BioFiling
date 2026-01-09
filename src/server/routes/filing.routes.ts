@@ -8,7 +8,7 @@ import {
   getMyRecords,
   getRecordDetail,
   submit,
-  update as updateRecord,
+  updateRecord,
 } from '@/controllers/filing.controller'
 
 const router = Router()
