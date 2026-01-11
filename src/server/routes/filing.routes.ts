@@ -1,9 +1,11 @@
 import { Router } from 'express'
-import { exportAllSubmissions } from '@/controllers/docx.controller'
+import {
+  exportAllSubmissions,
+  exportFiling,
+} from '@/controllers/docx.controller'
 import {
   audit,
   deleteRecord,
-  downloadRecord,
   getAllRecords,
   getMyRecords,
   getRecordDetail,
@@ -35,7 +37,7 @@ router.get('/:id', getRecordDetail)
 
 // 下载单个记录文档
 // GET /api/filings/:id/download
-router.get('/:id/download', downloadRecord)
+router.get('/:id/download', exportFiling)
 
 // 修改备案记录
 // PUT /api/filings/:id

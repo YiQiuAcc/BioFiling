@@ -10,7 +10,7 @@ import type {
 
 export const filingAPI = {
   /**
-   * 提交表单 (新建)
+   * 提交表单 (新建备案)
    * POST /api/filings/submit
    */
   submit: (data: FormDataState) => {
@@ -40,6 +40,7 @@ export const filingAPI = {
    */
   getAllRecords: (params?: { keyword?: string; status?: string }) =>
     http.get<ApiResponse<FilingRecord[]>>('/filings', { params }),
+
   /**
    * 获取单条记录详情
    * GET /api/filings/:id
@@ -62,22 +63,16 @@ export const filingAPI = {
     http.patch<ApiResponse>(`/filings/${id}/audit`, { status, comment }),
 
   // === 下载类接口 ===
-
   /**
    * 下载单个备案生成的文档
    * GET /api/filings/:id/download
    */
   downloadRecord: (id: number) =>
-    http.get(`/filings/${id}/download`, {
-      responseType: 'blob',
-    }),
+    http.get(`/filings/${id}/download`, { responseType: 'blob' }),
 
   /**
    * 导出所有记录 (管理员)
    * GET /api/filings/exports
    */
-  exportAll: () =>
-    http.get('/filings/exports', {
-      responseType: 'blob',
-    }),
+  exportAll: () => http.get('/filings/exports', { responseType: 'blob' }),
 }

@@ -18,11 +18,11 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = ''
     currentUser.value = undefined
     localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_info')
+    // localStorage.removeItem('user_info')
   }
 
   /**
-   * 初始化：如果有 token，尝试获取用户信息
+   * 初始化：如果有 token, 尝试获取用户信息
    */
   const initAuth = async () => {
     if (!token.value) return
@@ -68,11 +68,11 @@ export const useAuthStore = defineStore('auth', () => {
       // 可存用户信息在 localStorage
       // localStorage.setItem('user_info', JSON.stringify(user))
 
-      MessagePlugin.success(`欢迎回来，${user.name}`)
+      MessagePlugin.success(`欢迎回来, ${user.name}`)
       return true
     } catch (error) {
       console.error('Ticket validation failed:', error)
-      MessagePlugin.error('登录验证失败，请重试')
+      MessagePlugin.error('登录验证失败, 请重试')
       clearLocalAuth()
       return false
     }

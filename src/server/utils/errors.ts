@@ -1,11 +1,11 @@
-// 自定义错误类，用于区分不同的错误类型
+// 自定义错误类
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export class AppError extends Error {
+export class AppError<T = any> extends Error {
   public readonly statusCode: number
   public readonly isOperational: boolean
-  public readonly details?: any
+  public readonly details?: T
 
-  constructor(message: string, statusCode: number = 500, details?: any) {
+  constructor(message: string, statusCode: number = 500, details?: T) {
     super(message)
 
     this.name = this.constructor.name
@@ -14,24 +14,32 @@ export class AppError extends Error {
     this.isOperational = true
 
     // 保持正确的原型链
-    Object.setPrototypeOf(this, AppError.prototype)
-
-    // 在开发环境中捕获堆栈跟踪
-    if (process.env.NODE_ENV === 'development') {
+    Object.setPrototypeOf(this, new.target.prototype)
+    // 始终捕获堆栈
+    if (Error.captureStackTrace) {
       Error.captureStackTrace(this, this.constructor)
+    }
+  }
+
+  toJSON() {
+    return {
+      name: this.name,
+      message: this.message,
+      statusCode: this.statusCode,
+      details: this.details,
+      stack: this.stack,
     }
   }
 }
 
-// 具体错误类型
 export class NotFoundError extends AppError {
   constructor(message: string = 'Resource not found', details?: any) {
     super(message, 404, details)
   }
 }
 
-export class ValidationError extends AppError {
-  constructor(message: string = 'Validation failed', details?: any) {
+export class ValidationError<T = any> extends AppError<T> {
+  constructor(message: string = 'Validation failed', details?: T) {
     super(message, 400, details)
   }
 }

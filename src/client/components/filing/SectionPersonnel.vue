@@ -83,39 +83,32 @@ import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { MessagePlugin } from 'tdesign-vue-next'
 import { AddIcon, DeleteIcon } from 'tdesign-icons-vue-next'
+import { generateId } from '@/utils/filing'
 import { useFilingStore } from '@/stores/filing'
 
 const store = useFilingStore()
 const { formData } = storeToRefs(store)
 
-const props = defineProps<{
-  readonly?: boolean
-}>()
+const props = defineProps<{ readonly?: boolean }>()
 
 // 定义列结构
 const baseColumns = [
-  { colKey: 'department', title: '院系', width: 140 }, // 稍微调宽一点方便输入
+  { colKey: 'department', title: '院系', width: 120 },
   { colKey: 'name', title: '姓名', width: 100 },
-  { colKey: 'id', title: '工号/学号', width: 130 },
-  { colKey: 'phone', title: '联系电话', width: 140 },
+  { colKey: 'id', title: '工号/学号', width: 100 },
+  { colKey: 'phone', title: '联系电话', width: 120 },
   { colKey: 'content', title: '实验内容', ellipsis: true },
 ]
 
-// 动态计算列：如果是只读模式，不显示操作列
+// 动态计算列
 const dynamicColumns = computed(() => {
-  if (props.readonly) {
-    return baseColumns
-  }
+  // 如果是只读模式, 不显示操作列
+  if (props.readonly) return baseColumns
   return [
     ...baseColumns,
     { colKey: 'op', title: '操作', width: 60, fixed: 'right' as const },
   ]
 })
-
-// 生成唯一 Key
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substr(2)
-}
 
 const handleAddPerson = () => {
   formData.value.personnel.push({

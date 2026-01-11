@@ -26,7 +26,7 @@ interface FilingRecord {
 }
 
 // 详情用的完整记录
-// 包含系统字段，表单字段
+// 包含系统字段, 表单字段
 type FilingDetail = FilingRecord & FormDataState
 
 interface ApiResponse<T = void> {

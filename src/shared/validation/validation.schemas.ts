@@ -129,7 +129,7 @@ export const formDataSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['toxicSubstanceDesc'],
-        message: '已勾选涉及有毒物质，请填写详细描述',
+        message: '已勾选涉及有毒物质, 请填写详细描述',
       })
     }
 
@@ -138,11 +138,11 @@ export const formDataSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['publicInfoDesc'],
-        message: '选择部分公开时，请说明保密内容',
+        message: '选择部分公开时, 请说明保密内容',
       })
     }
 
-    // 实验对象逻辑校验 (如果填了动物等级，则必须填动物名称)
+    // 实验对象逻辑校验 (如果填了动物等级, 则必须填动物名称)
     if (data.animalGrade && !data.animalName?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -151,7 +151,7 @@ export const formDataSchema = z
       })
     }
 
-    // 病原体逻辑 (如果填了微生物种类，必须填名称)
+    // 病原体逻辑 (如果填了微生物种类, 必须填名称)
     if (data.pathogenType && !data.pathogenName?.trim()) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,

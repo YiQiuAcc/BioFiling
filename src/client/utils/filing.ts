@@ -2,7 +2,7 @@ import { MessagePlugin, type UploadProps } from 'tdesign-vue-next'
 import axios from 'axios'
 import type { FormDataState, ImageUploadResponse } from '@/types'
 
-const generateId = () => {
+export const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).slice(1, 5)
 }
 
@@ -105,8 +105,8 @@ export const handleDownloadError = (error: unknown) => {
     MessagePlugin.error('发生未知系统错误')
   }
 }
-// === 出错滚动 ===
 
+// === 出错滚动 ===
 // 定义字段与 Section 类的映射关系
 export const fieldToSectionMap: Record<string, string> = {
   leaderName: '.section-basic',

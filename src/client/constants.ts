@@ -1,4 +1,4 @@
-// --- 常量定义 ---
+// === 常量定义 ===
 const TITLE_OPTIONS = [
   '教授',
   '副教授',
@@ -30,7 +30,6 @@ const BSL_LEVELS = [
   { label: 'BSL-4 (ABSL-4)', value: 'BSL-4' },
 ]
 
-// 文档中列出的操作类型
 const OPERATION_TYPES = [
   '1.病毒培养',
   '2.活菌操作',

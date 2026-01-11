@@ -10,7 +10,7 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(TDesign)
-app.use(pinia) // 挂载 Pinia
-app.use(router) // 挂载 Router
+app.use(pinia)
+app.use(router)
 
 app.mount('#app')

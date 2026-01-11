@@ -38,8 +38,7 @@ http.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('auth_token')
-      localStorage.removeItem('user_info')
-      // 可引入 router 进行跳转
+      // localStorage.removeItem('user_info')
     }
     return Promise.reject(error)
   },
@@ -55,17 +54,15 @@ export const downloadBlob = (
 ) => {
   const { data, headers } = response
   if (!headers) {
-    console.warn('响应头为空，使用默认文件名')
+    console.warn('响应头为空, 使用默认文件名')
     return downloadWithDefaultName(data, originFilename)
   }
   // 尝试从 Content-Disposition 获取文件名
   let filename = originFilename
-
-  const disposition =
+  const disposition: string =
     headers['content-disposition'] || headers['Content-Disposition']
-
   if (disposition) {
-    // 优先匹配 filename*=utf-8''
+    // 匹配 filename*=utf-8''
     const utf8Match = disposition.match(/filename\*=utf-8''([^;]+)/i)
     if (utf8Match?.[1]) {
       filename = decodeURIComponent(utf8Match[1])
@@ -77,7 +74,6 @@ export const downloadBlob = (
       }
     }
   }
-
   // 下载文件
   const url = window.URL.createObjectURL(new Blob([data]))
   const link = document.createElement('a')
@@ -85,7 +81,6 @@ export const downloadBlob = (
   link.setAttribute('download', filename)
   document.body.appendChild(link)
   link.click()
-
   // 延迟清理
   setTimeout(() => {
     document.body.removeChild(link)

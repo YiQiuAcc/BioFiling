@@ -7,7 +7,7 @@ export const useAppStore = defineStore('app', () => {
   const mode = ref(savedTheme ? `${savedTheme}-mode` : 'light-mode')
 
   const initTheme = () => {
-    // 如果没有本地缓存，才跟随系统
+    // 如果没有本地缓存, 跟随系统
     if (!localStorage.getItem('theme-mode')) {
       if (
         window.matchMedia &&

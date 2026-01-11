@@ -1,5 +1,5 @@
 <template>
-  <div class="home-container" style="padding: 24px">
+  <div class="home-container">
     <t-row justify="space-between" align="center" class="mb-4">
       <t-col>
         <h2 class="title">我的备案记录</h2>
@@ -41,8 +41,23 @@
           stripe
         >
           <template #status="{ row }">
-            <t-tag :theme="getStatusTheme(row.status)" variant="light">
-              {{ row.status || '审核中' }}
+            <t-tooltip
+              v-if="row.status === 'REJECTED'"
+              :content="`驳回原因：${row.auditComment || '无驳回说明'}`"
+              theme="danger"
+              placement="top"
+            >
+              <t-tag
+                :theme="getStatusTheme(row.status)"
+                variant="light"
+                style="cursor: help"
+              >
+                {{ getStatusText(row.status) }}
+              </t-tag>
+            </t-tooltip>
+
+            <t-tag v-else :theme="getStatusTheme(row.status)" variant="light">
+              {{ getStatusText(row.status) }}
             </t-tag>
           </template>
 
@@ -131,16 +146,30 @@ const columns = [
   { colKey: 'leaderName', title: '负责人', width: 120 },
   { colKey: 'department', title: '所属院系', width: 150 },
   { colKey: 'status', title: '状态', width: 120 },
+  { colKey: 'submitterName', title: '提交人', width: 120 },
   { colKey: 'createdAt', title: '提交日期', width: 120 },
   { colKey: 'op', title: '操作', width: 200, fixed: 'right' as const },
 ]
 
 // 状态样式映射
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'SUBMITTED':
+      return '审核中'
+    case 'APPROVED':
+      return '已通过'
+    case 'REJECTED':
+      return '已驳回'
+    default:
+      return status
+  }
+}
+
 const getStatusTheme = (status: string) => {
   switch (status) {
-    case '已通过':
+    case 'APPROVED':
       return 'success'
-    case '驳回':
+    case 'REJECTED':
       return 'danger'
     default:
       return 'warning'

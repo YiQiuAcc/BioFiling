@@ -4,59 +4,58 @@ import { UnauthorizedError } from '@/utils/errors'
 import logger from '@/utils/logger'
 import { type User } from '@/types'
 
-const ADMIN_IDS = process.env.ADMIN_IDS?.split(',')
-
-const checkEnv = () => {
-  if (!process.env.JWT_SECRET) {
-    logger.error('JWT_SECRET is not defined in environment variables')
-    throw new Error('JWT_SECRET is not defined')
-  }
+const JWT_SECRET = process.env.JWT_SECRET
+if (!JWT_SECRET) {
+  logger.error('FATAL: JWT_SECRET is not defined in environment variables')
+  process.exit(1)
 }
+
+// 管理员名单
+const ADMIN_IDS_SET = new Set(
+  (process.env.ADMIN_IDS || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean), // 过滤空字符串
+)
 
 /**
  * 生成 JWT Token
- * @param payload 包含 netId, name, isAdmin
  */
 export const generateToken = (payload: User) => {
-  checkEnv()
-  return jwt.sign(payload, process.env.JWT_SECRET as string, {
+  return jwt.sign(payload, JWT_SECRET, {
     expiresIn: '8h',
   })
 }
 
 /**
- * 中间件：验证 Token 并注入用户信息
+ * 验证 Token 并注入用户信息
  */
-export const authenticate = async (
+export const authenticate = (
   req: Request,
   _res: Response,
   next: NextFunction,
 ) => {
-  checkEnv()
   const authHeader = req.headers.authorization
-
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     return next(new UnauthorizedError('未提供 Token 或格式错误'))
   }
 
+  const token = authHeader.split(' ')[1]
   try {
-    const token = authHeader.split(' ')[1]
     // 验证并解码
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as User
-    // 管理员白名单
-    const isAdmin = ADMIN_IDS?.includes(decoded.netId)
-
-    // 将解码后的用户信息直接注入 request
+    const decoded = jwt.verify(token, JWT_SECRET, {
+      algorithms: ['HS256'],
+    }) as User
+    const isAdmin = ADMIN_IDS_SET.has(decoded.netId)
     req.user = {
       netId: decoded.netId,
       name: decoded.name,
       isAdmin: isAdmin,
     }
+
     next()
   } catch (error) {
-    logger.warn(
-      `Auth failed: ${error instanceof Error ? error.message : error}`,
-    )
+    logger.warn(`Auth failed: ${(error as Error).message}`)
     next(new UnauthorizedError('Token 无效或已过期'))
   }
 }

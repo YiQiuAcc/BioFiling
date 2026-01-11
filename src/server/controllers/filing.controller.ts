@@ -1,127 +1,89 @@
-import { ZodError, ZodIssue } from 'zod'
+import { z } from 'zod'
 import { Request, Response } from 'express'
-import logger from '@/utils/logger'
+import { ForbiddenError } from '@/utils/errors'
+import { asyncHandler } from '@/middlewares/errorHandler'
 import { docxService } from '@/services/docx.service'
 import { filingService } from '@/services/filing.service'
-import type { ApiResponse, FilingDetail, FilingRecord } from '@/types'
+import { ApiResponse, FilingDetail, FilingRecord } from '@/types'
 import { formDataSchema } from '../../shared/validation/validation.schemas'
 
-// 确保路径正确
-const parseId = (req: Request): number => {
-  const id = Number(req.params.id)
-  if (isNaN(id)) throw new Error('INVALID_ID')
-  return id
-}
+// ID 参数校验 Schema
+const paramsSchema = z.object({
+  id: z.coerce.number().int().positive({ message: '无效的 ID 格式' }),
+})
 
-// 统一错误处理
-const handleError = (res: Response, e: unknown, action: string) => {
-  const msg = e instanceof Error ? e.message : String(e)
-  logger.error(`${action} Error:`, e)
+// 审核校验 Schema
+const auditSchema = z.object({
+  status: z.enum(['APPROVED', 'REJECTED'], {
+    errorMap: () => ({ message: '无效的审核状态' }),
+  }),
+  comment: z.string().optional(),
+})
 
-  if (e instanceof ZodError) {
-    return res
-      .status(400)
-      .json({ message: '数据验证失败', data: e.errors } as ApiResponse<
-        ZodIssue[]
-      >)
+/**
+ * 提交备案
+ */
+export const submit = asyncHandler(async (req: Request, res: Response) => {
+  const user = req.user!
+  // Zod 校验 body
+  const validatedData = formDataSchema.parse(req.body)
+
+  const record = await filingService.createRecord(validatedData, {
+    netId: user.netId,
+    name: user.name,
+  })
+
+  const response: ApiResponse<number> = {
+    message: '备案提交成功',
+    data: record.id,
   }
-  if (msg === 'INVALID_ID') {
-    return res.status(400).json({ message: '无效的 ID' } as ApiResponse)
-  }
-  if (msg.includes('不存在')) {
-    return res.status(404).json({ message: msg } as ApiResponse)
-  }
-  if (msg.includes('无权') || msg.includes('无法')) {
-    return res.status(403).json({ message: msg } as ApiResponse)
-  }
+  res.status(200).json(response)
+})
 
-  return res.status(500).json({ message: '服务器内部错误' } as ApiResponse)
-}
-
-// --- Controllers ---
-
-export const submit = async (req: Request, res: Response) => {
-  try {
-    const user = req.user!
-    const validatedData = formDataSchema.parse(req.body)
-
-    const record = await filingService.createRecord(validatedData, {
-      netId: user.netId,
-      name: user.name,
-    })
-
-    logger.info(`Filing created: id=${record.id} by ${user.netId}`)
-    res
-      .status(200)
-      .json({ message: '备案提交成功', data: record.id } as ApiResponse<number>)
-  } catch (e) {
-    handleError(res, e, 'Submit')
-  }
-}
-
-export const downloadRecord = async (req: Request, res: Response) => {
-  try {
-    const id = parseId(req)
-    const user = req.user!
-
-    const { filename, data } = await filingService.getDownloadData(id, {
-      netId: user.netId,
-      isAdmin: user.isAdmin,
-    })
-
-    const buffer = await docxService.generateBuffer(data)
-    const encodedFilename = encodeURIComponent(`${filename}.docx`)
-
-    res.setHeader(
-      'Content-Type',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    )
-    res.setHeader(
-      'Content-Disposition',
-      `attachment; filename="${encodedFilename}"; filename*=utf-8''${encodedFilename}`,
-    )
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition')
-    res.send(buffer)
-  } catch (e) {
-    handleError(res, e, 'Download')
-  }
-}
-
-export const getMyRecords = async (req: Request, res: Response) => {
-  try {
+/**
+ * 获取我的记录
+ */
+export const getMyRecords = asyncHandler(
+  async (req: Request, res: Response) => {
     const rawRecords = await filingService.getUserRecords(req.user!.netId)
-    // 创建一个新对象返回给前端
+
     const viewModels = rawRecords.map((record) => ({
       ...record,
-      createdAt: record.createdAt.toLocaleString('zh-CN', { hour12: false }), // 转换为字符串
+      createdAt: record.createdAt.toLocaleString('zh-CN', { hour12: false }),
     }))
 
-    res.status(200).json({
+    const response: ApiResponse<typeof viewModels> = {
       message: '获取备案记录成功',
       data: viewModels,
-    } as ApiResponse<any[]>)
-  } catch (e) {
-    handleError(res, e, 'Get My Records')
-  }
-}
+    }
+    res.status(200).json(response)
+  },
+)
 
-export const deleteRecord = async (req: Request, res: Response) => {
-  try {
-    const id = parseId(req)
+/**
+ * 删除记录
+ */
+export const deleteRecord = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = paramsSchema.parse(req.params)
+
     await filingService.deleteRecord(
       id,
       req.user!.netId,
       req.user!.isAdmin || false,
     )
-    res.status(200).json({ message: '删除成功' } as ApiResponse)
-  } catch (e) {
-    handleError(res, e, 'Delete')
-  }
-}
 
-export const getRecordDetail = async (req: Request, res: Response) => {
-  try {
-    const id = parseId(req)
+    res.status(200).json({ message: '删除成功' } as ApiResponse)
+  },
+)
+
+/**
+ * 获取记录详情
+ */
+export const getRecordDetail = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = paramsSchema.parse(req.params)
+
     const record = await filingService.checkAccess(id, {
       netId: req.user!.netId,
       isAdmin: req.user!.isAdmin,
@@ -129,7 +91,7 @@ export const getRecordDetail = async (req: Request, res: Response) => {
 
     const content = (record.content as Record<string, any>) || {}
 
-    // 扁平化返回
+    // 扁平化数据结构
     const flattenedRecord = {
       ...content,
       id: record.id,
@@ -144,18 +106,20 @@ export const getRecordDetail = async (req: Request, res: Response) => {
       leaderName: record.leaderName,
     }
 
-    res.status(200).json({
+    const response: ApiResponse<FilingDetail> = {
       message: '获取详情成功',
-      data: flattenedRecord,
-    } as unknown as ApiResponse<FilingDetail>)
-  } catch (e) {
-    handleError(res, e, 'Get Detail')
-  }
-}
+      data: flattenedRecord as unknown as FilingDetail,
+    }
+    res.status(200).json(response)
+  },
+)
 
-export const updateRecord = async (req: Request, res: Response) => {
-  try {
-    const id = parseId(req)
+/**
+ * 更新记录
+ */
+export const updateRecord = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = paramsSchema.parse(req.params)
     const user = req.user!
     const validatedData = formDataSchema.parse(req.body)
 
@@ -165,49 +129,49 @@ export const updateRecord = async (req: Request, res: Response) => {
       user.netId,
       user.isAdmin || false,
     )
-    res.status(200).json({ message: '更新成功' } as ApiResponse)
-  } catch (e) {
-    handleError(res, e, 'Update')
-  }
-}
 
-export const getAllRecords = async (req: Request, res: Response) => {
-  try {
+    res.status(200).json({ message: '更新成功' } as ApiResponse)
+  },
+)
+
+/**
+ * 获取所有记录 (管理员)
+ */
+export const getAllRecords = asyncHandler(
+  async (req: Request, res: Response) => {
     if (!req.user?.isAdmin) {
-      throw new Error('无权查看所有记录')
+      throw new ForbiddenError('无权查看所有记录')
     }
+
     const { keyword, status } = req.query
     const records = await filingService.getAllRecords({
       keyword: keyword as string,
       status: status as string,
     })
-    // 日期格式化
+
     const viewModels = records.map((record) => ({
       ...record,
-      createdAt: record.createdAt.toLocaleString('zh-CN', { hour12: false }), // 转换为字符串
+      createdAt: record.createdAt.toLocaleString('zh-CN', { hour12: false }),
     }))
-    res
-      .status(200)
-      .json({ message: '获取所有记录成功', data: viewModels } as ApiResponse<
-        FilingRecord[]
-      >)
-  } catch (e) {
-    handleError(res, e, 'Get All Records')
-  }
-}
 
-export const audit = async (req: Request, res: Response) => {
-  try {
-    const id = parseId(req)
-    const { status, comment } = req.body
+    const response: ApiResponse<FilingRecord[]> = {
+      message: '获取所有记录成功',
+      data: viewModels,
+    }
+    res.status(200).json(response)
+  },
+)
 
-    if (!req.user?.isAdmin) throw new Error('无权审核')
-    if (!['APPROVED', 'REJECTED'].includes(status))
-      throw new Error('无效的审核状态')
+/**
+ * 审核记录 (管理员)
+ */
+export const audit = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = paramsSchema.parse(req.params)
+  if (!req.user?.isAdmin) throw new ForbiddenError('无权审核')
 
-    await filingService.auditRecord(id, status, comment)
-    res.status(200).json({ message: '审核完成' } as ApiResponse)
-  } catch (e) {
-    handleError(res, e, 'Audit')
-  }
-}
+  // 使用 Zod 校验 body 参数
+  const { status, comment } = auditSchema.parse(req.body)
+  await filingService.auditRecord(id, status, comment)
+
+  res.status(200).json({ message: '审核完成' } as ApiResponse)
+})

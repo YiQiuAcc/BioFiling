@@ -9,7 +9,7 @@ const router = Router()
 
 // 健康检查
 router.get('/health', (_req, res) => {
-  res.json({ message: 'ok', timestamp: new Date() } as ApiResponse<Date>)
+  res.json({ message: 'ok', data: new Date() } as ApiResponse<Date>)
 })
 
 // 认证路由 (CAS & Current User)

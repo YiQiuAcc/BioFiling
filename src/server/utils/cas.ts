@@ -3,9 +3,10 @@ import { parseStringPromise } from 'xml2js'
 import logger from './logger'
 
 /* eslint-disable */
-// 使用环境变量，默认为示例 CAS 地址
-const CAS_SERVER_URL = process.env.CAS_SERVER_URL || 'https://cas.example.edu.cn'
-const CAS_VALIDATE_PATH = '/authserver/serviceValidate'
+// 使用环境变量, 默认为示例 CAS 地址
+const CAS_SERVER_URL =
+  process.env.CAS_SERVER_URL || 'https://cas.example.edu.cn/authserver'
+const CAS_VALIDATE_PATH = '/serviceValidate'
 
 interface CasValidationResult {
   valid: boolean
@@ -25,11 +26,9 @@ export const validateCasTicket = async (
 ): Promise<CasValidationResult> => {
   try {
     // 构造完整的验证地址
-    // 最终形式: https://cas.example.edu.cn/authserver/serviceValidate?ticket=...&service=...
+    // https://cas.example.edu.cn/authserver/serviceValidate?ticket=...&service=...
     const validateUrl = `${CAS_SERVER_URL}${CAS_VALIDATE_PATH}`
-
     logger.info(`[CAS] Validating ticket: ${ticket} for service: ${service}`)
-
     const response = await axios.get(validateUrl, {
       params: {
         ticket,
@@ -40,27 +39,23 @@ export const validateCasTicket = async (
 
     // 解析 CAS 返回的 XML
     const result = await parseStringPromise(response.data)
-
     // XML 结构通常如下:
     // <cas:serviceResponse>
     //   <cas:authenticationSuccess>
-    //     <cas:user>20201101</cas:user>
+    //     <cas:user>20220222</cas:user>
     //     <cas:attributes>...</cas:attributes>
     //   </cas:authenticationSuccess>
     // </cas:serviceResponse>
 
     const serviceResponse = result['cas:serviceResponse']
     // await writeFile('./debug.txt', JSON.stringify(serviceResponse, null, 2))
-
     if (serviceResponse && serviceResponse['cas:authenticationSuccess']) {
       const successData = serviceResponse['cas:authenticationSuccess'][0]
-      // 获取 NetID (工号)
+      // 获取工号
       const user = successData['cas:user']?.[0]
-
       // 解析扩展属性
       const rawAttributes = successData['cas:attributes']?.[0] || {}
       const attributes: Record<string, any> = {}
-
       // 扁平化属性数组 (xml2js 会把内容变成数组)
       for (const key in rawAttributes) {
         if (Array.isArray(rawAttributes[key])) {
@@ -69,7 +64,6 @@ export const validateCasTicket = async (
           attributes[key] = rawAttributes[key]
         }
       }
-
       return {
         valid: true,
         user,

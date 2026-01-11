@@ -36,7 +36,7 @@ export const authAPI = {
    */
   logout: () => {
     localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_info')
+    // localStorage.removeItem('user_info')
     window.location.href = `${CAS_SERVER_URL}/logout?service=${encodeURIComponent(SERVICE_URL)}`
   },
 }

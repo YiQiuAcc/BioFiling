@@ -29,11 +29,11 @@
           theme="default"
           variant="outline"
           size="medium"
-          @click="handleBatchExport"
+          @click="handleExport"
           :loading="exporting"
         >
           <template #icon><download-icon /></template>
-          批量导出备案表
+          批量导出
         </t-button>
 
         <t-button
@@ -43,9 +43,7 @@
           size="medium"
           @click="handleLogout"
         >
-          <template #icon>
-            <poweroff-icon />
-          </template>
+          <template #icon><poweroff-icon /></template>
           退出登录
         </t-button>
       </div>
@@ -68,9 +66,8 @@ import { downloadBlob, filingAPI } from '@/api'
 
 const currentYear = new Date().getFullYear()
 const appStore = useAppStore()
-const exporting = ref(false)
-
 const authStore = useAuthStore()
+const exporting = ref(false)
 
 // 退出登录处理函数
 const handleLogout = () => {
@@ -78,7 +75,7 @@ const handleLogout = () => {
 }
 
 // 批量导出
-const handleBatchExport = async () => {
+const handleExport = async () => {
   if (!authStore.isAdmin) return
   exporting.value = true
   try {
@@ -92,7 +89,7 @@ const handleBatchExport = async () => {
     MessagePlugin.success('批量导出成功')
   } catch (error) {
     console.error('导出错误:', error)
-    MessagePlugin.error('导出失败，请检查权限')
+    MessagePlugin.error('导出失败, 请检查权限')
   } finally {
     exporting.value = false
   }

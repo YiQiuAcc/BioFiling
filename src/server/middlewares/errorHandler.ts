@@ -1,6 +1,7 @@
 import { isAxiosError } from 'axios'
 import { ZodError } from 'zod'
 import { ErrorRequestHandler, NextFunction, Request, Response } from 'express'
+import jwt from 'jsonwebtoken'
 import { Prisma } from '@/generated/client'
 import { AppError } from '../utils/errors'
 import logger from '../utils/logger'
@@ -34,25 +35,38 @@ export const errorHandler: ErrorRequestHandler = (
 ) => {
   let statusCode = err.statusCode || 500
   let message = err.message || 'Internal Server Error'
+  let errorsData = undefined
+
+  // 处理自定义 AppError
+  if (err instanceof AppError) {
+    if (err.details) {
+      errorsData = err.details
+    }
+  }
 
   // Zod 验证错误
-  if (err instanceof ZodError) {
+  else if (err instanceof ZodError) {
     statusCode = 400
     message = '请求参数验证失败'
-    // 保留Zod错误的详细信息以便调试
-    const errorMessage = err.errors
-      .map((e) => `${e.path.join('.')}: ${e.message}`)
-      .join(', ')
-    logger.error(`Validation failed: ${errorMessage}`)
+    // 提取结构化的错误信息, 供前端或日志使用
+    errorsData = err.errors.map((e) => ({
+      path: e.path.join('.'),
+      message: e.message,
+    }))
+    message = errorsData.map((e) => `${e.path}: ${e.message}`).join(', ')
+    logger.warn('zod验证失败: ' + message)
   }
 
   // JWT 认证错误
-  else if (err.name === 'JsonWebTokenError') {
+  else if (err instanceof jwt.JsonWebTokenError) {
     statusCode = 401
-    message = '无效的令牌 (Invalid token)'
-  } else if (err.name === 'TokenExpiredError') {
-    statusCode = 401
-    message = '令牌已过期 (Token expired)'
+    if (err instanceof jwt.TokenExpiredError) {
+      message = '令牌已过期 (Token expired)'
+    } else if (err instanceof jwt.NotBeforeError) {
+      message = '令牌尚未激活 (Token not active)'
+    } else {
+      message = '无效的令牌 (Invalid token)'
+    }
   }
 
   // Prisma 数据库错误
@@ -65,7 +79,7 @@ export const errorHandler: ErrorRequestHandler = (
       statusCode = 404
       message = '请求的记录不存在'
     } else {
-      statusCode = 400 // Prisma 其他已知错误通常是坏请求
+      statusCode = 400
       message =
         process.env.NODE_ENV === 'development'
           ? `DB Error: ${err.code}`
@@ -76,65 +90,55 @@ export const errorHandler: ErrorRequestHandler = (
   // Axios HTTP 错误
   else if (isAxiosError(err)) {
     statusCode = err.response?.status || 502
-    message = err.response?.data?.message || 'External service request failed'
-
+    message =
+      err.response?.data?.message || err.message || 'External service error'
     if (statusCode === 404) {
-      message = 'Requested resource not found'
+      message = 'External resource not found'
     }
   }
 
-  // 自定义 AppError
-  else if (err instanceof AppError) {
-    // 已经设置了 statusCode 和 message，不需要额外处理
-  }
-
-  // 记录日志
   const logLevel = statusCode >= 500 ? 'error' : 'warn'
-  const logData: any = {
+  // 构建日志对象
+  const logData: Record<string, any> = {
     statusCode,
     url: req.originalUrl,
     method: req.method,
-    userAgent: req.get('User-Agent'),
     ip: req.ip,
+    // 记录 Zod 错误详情
+    validationErrors: errorsData,
   }
 
-  // 在开发环境或500错误时记录更多信息
+  // 开发环境或严重错误时, 记录更详细的信息
   if (process.env.NODE_ENV === 'development' || statusCode >= 500) {
-    logData.error = {
-      name: err.name,
-      message: err.message,
-      stack: err.stack,
-    }
-
+    logData.stack = err.stack
+    logData.originalErrorName = err.name
+    // Body 敏感信息脱敏
     if (req.body && Object.keys(req.body).length > 0) {
       const safeBody = { ...req.body }
-      // 移除可能的敏感字段
-      const sensitiveFields = ['password', 'secret']
+      const sensitiveFields = ['password', 'token', 'secret', 'authorization']
       sensitiveFields.forEach((field) => {
-        if (safeBody[field]) safeBody[field] = '***REDACTED***'
+        // 模糊匹配键名
+        Object.keys(safeBody).forEach((key) => {
+          if (key.toLowerCase().includes(field))
+            safeBody[key] = '***REDACTED***'
+        })
       })
       logData.body = safeBody
     }
   }
-
+  // 统一输出日志
   logger.log(logLevel, `${statusCode} - ${message}`, logData)
 
-  // 响应
-  const response: any = {
-    message,
-    // 仅在开发环境返回 Zod 详细字段，生产环境只给概览
-    errors:
-      process.env.NODE_ENV === 'development' && err instanceof ZodError
-        ? err.errors.map((e) => ({
-            path: e.path.join('.'),
-            message: e.message,
-          }))
-        : undefined,
+  const responsePayload: any = { message }
+
+  // 仅在开发环境或是验证错误时返回详细 errors 数组
+  if (errorsData) {
+    responsePayload.errors = errorsData
   }
 
   if (process.env.NODE_ENV === 'development') {
-    response.stack = err.stack
+    responsePayload.stack = err.stack
   }
 
-  res.status(statusCode).json(response)
+  res.status(statusCode).json(responsePayload)
 }

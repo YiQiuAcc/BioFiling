@@ -134,7 +134,7 @@
                   :label="['是', '否']"
                 />
                 <span class="tip-text" v-if="!formData.hasToxicSubstance">
-                  如涉及，请开启开关填写详细说明
+                  如涉及, 请开启开关填写详细说明
                 </span>
               </div>
               <transition name="slide-fade">

@@ -16,8 +16,7 @@ if (!fs.existsSync(TEMP_DIR)) {
 
 const storage = multer.diskStorage({
   destination: function (_req, _file, cb) {
-    // 统一存入 uploads/temp
-    cb(null, TEMP_DIR)
+    cb(null, TEMP_DIR) // 先存入 uploads/temp
   },
   filename: function (_req, file, cb) {
     const ext = path.extname(file.originalname)

@@ -7,7 +7,7 @@ if (!fs.existsSync(logDir)) {
   fs.mkdirSync(logDir)
 }
 
-// 开发环境：颜色 + 简单文本
+// 开发环境：颜色 + 文本
 const devFormat = winston.format.combine(
   winston.format.colorize(),
   winston.format.timestamp({ format: 'HH:mm:ss' }),
@@ -39,7 +39,7 @@ const logger = winston.createLogger({
     }),
     // 所有日志文件
     new winston.transports.File({
-      filename: path.join(logDir, 'combined.log'),
+      filename: path.join(logDir, 'all.log'),
       maxsize: 5242880,
       maxFiles: 5,
     }),

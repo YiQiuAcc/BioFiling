@@ -20,7 +20,7 @@
               theme="image"
               accept="image/*"
               :readonly="readonly"
-              tip="请上传图片，将直接插入到文档中"
+              tip="请上传图片, 将直接插入到文档中"
             />
           </t-form-item>
         </t-col>
@@ -33,7 +33,7 @@
           >
             <t-textarea
               v-model="formData.certifyExplanation"
-              placeholder="请简要说明上传的证明文件内容（如伦理审查批件、资格证书等）"
+              placeholder="请简要说明上传的证明文件内容"
               :autosize="{ minRows: 2 }"
             />
           </t-form-item>
@@ -83,17 +83,15 @@ import { formatUploadResponse } from '@/utils/filing'
 import { useAuthStore } from '@/stores/auth'
 import { useFilingStore } from '@/stores/filing'
 
-const store = useFilingStore()
-const { formData } = storeToRefs(store)
+const filingStore = useFilingStore()
 const authStore = useAuthStore()
+const { formData } = storeToRefs(filingStore)
 const errors = useFormErrors()
 
 // === 在组件内管理 files 状态 ===
 const files = ref<UploadFile[]>([])
 
-const props = defineProps<{
-  readonly?: boolean
-}>()
+const props = defineProps<{ readonly?: boolean }>()
 
 // === 同步逻辑 ===
 const handleUploadSuccess = () => {
@@ -104,16 +102,17 @@ const handleUploadSuccess = () => {
       const resp = file.response as any
       if (resp.dbPath) paths.push(resp.dbPath)
     }
-    // 处理已存在的文件 (如果是编辑回显的情况)
+    // 处理已存在的文件 (编辑回显)
     else if (file.url) {
-      paths.push(file.url) // 或者你需要解析出相对路径
+      paths.push(file.url)
     }
   })
-  // 更新 Store 中的 formData
+  // 更新 Store 中的 formData.certifyImagesPath
   formData.value.certifyImagesPath = paths
 }
+
 onMounted(() => {
-  // 监听 formData.certifyImagesPath 的变化，将图片 URL 转换为 UploadFile 对象
+  // 监听 formData.certifyImagesPath 的变化, 将图片 URL 转换为 UploadFile 对象
   watch(
     () => formData.value.certifyImagesPath,
     (paths) => {
@@ -131,6 +130,7 @@ onMounted(() => {
     { immediate: true },
   )
 })
+
 const uploadHeaders = {
   Authorization: `Bearer ${authStore.token}`,
 }

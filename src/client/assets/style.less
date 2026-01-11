@@ -364,7 +364,7 @@ body {
 
 @media (max-width: 768px) {
   .app-layout {
-    /* 为移动端底部栏留出更多空间，防止遮挡内容 */
+    /* 为移动端底部栏留出更多空间, 防止遮挡内容 */
     padding-bottom: 140px;
   }
 
@@ -436,10 +436,45 @@ body {
       button {
         flex: 1;
         min-width: 0;
+        padding: 0 8px;
+        .t-icon,
+        svg {
+          width: 0px;
+          height: 0px;
+          display: none !important;
+        }
+        span {
+          margin: 0px !important;
+        }
+        /* 图标不缩小, 并设定固定尺寸 */
+        // .t-icon, svg {
+        //   font-size: 14px !important;
+        //   width: 18px !important;
+        //   height: 18px !important;
+        //   flex-shrink: 0;
+        // }
       }
 
       .btn-submit {
-        flex: 2; /* 提交按钮更宽 */
+        flex: 2;
+      }
+    }
+  }
+  .page-header {
+    .header-actions {
+      .t-button {
+        flex: 1;
+        min-width: 0;
+        padding: 0 8px;
+        .t-icon,
+        svg {
+          width: 0px;
+          height: 0px;
+          display: none !important;
+        }
+        span {
+          margin: 0px !important;
+        }
       }
     }
   }

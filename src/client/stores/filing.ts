@@ -31,7 +31,7 @@ export const useFilingStore = defineStore('filing', () => {
 
   /** 设置表单数据 (用于编辑回显) */
   const setFormData = (data: Partial<FormDataState>) => {
-    // 深度合并或直接赋值，需注意数组的处理
+    // 深度合并或直接赋值, 需注意数组的处理
     Object.assign(formData, data)
   }
 
@@ -123,15 +123,15 @@ export const useFilingStore = defineStore('filing', () => {
       locationType: '校内',
       locationDetail: '实验大楼A座301室',
       dateRange: ['2026-01-15', '2026-06-30'],
-      facilityMatchDesc: '实验室设备齐全，符合生物安全要求',
-      workProject: '每周工作5天，每天8小时',
+      facilityMatchDesc: '实验室设备齐全, 符合生物安全要求',
+      workProject: '每周工作5天, 每天8小时',
       experimentMethod: '按照标准分子生物学实验方法进行',
       experimentPurpose: '研究蛋白质功能及其相互作用',
       disposalMethod: '按学校生物废物处理规定执行',
-      certifyExplanation: '项目已通过伦理审查，符合安全规范',
+      certifyExplanation: '项目已通过伦理审查, 符合安全规范',
       certifyImagesPath: [],
       publicInfoType: '部分公开',
-      publicInfoDesc: '涉及部分商业机密，不对外公开',
+      publicInfoDesc: '涉及部分商业机密, 不对外公开',
       projectCode: '123',
     }
 
@@ -189,7 +189,7 @@ export const useFilingStore = defineStore('filing', () => {
     try {
       await filingAPI.delete(id)
       MessagePlugin.success('删除成功')
-      // 如果删除的是当前列表中的项，直接本地移除，避免重新请求
+      // 如果删除的是当前列表中的项, 直接本地移除, 避免重新请求
       const idx = records.value.findIndex((r) => r.id === id)
       if (idx !== -1) records.value.splice(idx, 1)
     } catch (error) {
@@ -204,15 +204,17 @@ export const useFilingStore = defineStore('filing', () => {
   ) => {
     try {
       await filingAPI.audit(id, status, comment)
-
-      // 更新本地状态
+      // 更新当前详情页数据
       if (currentRecord.value?.id === id) {
         currentRecord.value.status = status
         currentRecord.value.auditComment = comment || ''
       }
+      // 更新列表页数据
       const record = records.value.find((r) => r.id === id)
-      if (record) record.status = status
-
+      if (record) {
+        record.status = status
+        record.auditComment = comment || ''
+      }
       MessagePlugin.success(status === 'APPROVED' ? '已通过' : '已驳回')
       return true
     } catch (error) {

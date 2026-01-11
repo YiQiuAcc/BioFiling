@@ -8,13 +8,36 @@
         <t-button
           theme="primary"
           size="large"
+          variant="outline"
           class="ml-2"
           @click="handleDownload"
         >
           <template #icon><download-icon /></template>
           下载文档
         </t-button>
+
+        <template v-if="authStore.isAdmin">
+          <t-button
+            theme="danger"
+            size="large"
+            class="ml-2"
+            @click="emit('audit', 'REJECTED')"
+          >
+            <template #icon><close-circle-icon /></template>
+            驳回
+          </t-button>
+          <t-button
+            theme="success"
+            size="large"
+            class="ml-2"
+            @click="emit('audit', 'APPROVED')"
+          >
+            <template #icon><check-circle-icon /></template>
+            通过
+          </t-button>
+        </template>
       </div>
+
       <div v-else class="action-buttons">
         <t-button
           theme="default"
@@ -24,9 +47,10 @@
         >
           填充模拟数据
         </t-button>
+
         <t-popconfirm
           content="确定要重置所有已填写的内容吗？"
-          @confirm="handleReset"
+          @confirm="emit('reset')"
         >
           <t-button theme="default" variant="outline" size="large">
             <template #icon>
@@ -39,7 +63,7 @@
           theme="primary"
           size="large"
           :loading="filingStore.submitting"
-          @click="emitSubmit"
+          @click="emit('submit')"
           class="btn-submit"
         >
           <template #icon><save-icon /></template>
@@ -53,30 +77,26 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { MessagePlugin } from 'tdesign-vue-next'
-import { SaveIcon } from 'tdesign-icons-vue-next'
-import { DownloadIcon, FileRestoreIcon } from 'tdesign-icons-vue-next'
+import {
+  CheckCircleIcon,
+  CloseCircleIcon,
+  DownloadIcon,
+  FileRestoreIcon,
+  SaveIcon,
+} from 'tdesign-icons-vue-next'
+import { useAuthStore } from '@/stores/auth'
 import { useFilingStore } from '@/stores/filing'
 
-// 定义事件
-const emit = defineEmits(['submit', 'reset'])
-
+const emit = defineEmits(['submit', 'reset', 'audit'])
 const props = defineProps<{
   isPreviewMode: boolean
 }>()
 
-const filingStore = useFilingStore()
 const router = useRouter()
-const emitSubmit = () => {
-  // 仅通知父组件
-  emit('submit')
-}
+const authStore = useAuthStore()
+const filingStore = useFilingStore()
 
-const handleReset = () => {
-  filingStore.resetForm()
-  emit('reset') // 通知父组件清除验证错误状态
-  MessagePlugin.success('表单已重置')
-}
-
+// === 数据填充逻辑 ===
 const handleFillMockData = () => {
   filingStore.fillWithMockData()
   MessagePlugin.success('模拟数据已填充')
