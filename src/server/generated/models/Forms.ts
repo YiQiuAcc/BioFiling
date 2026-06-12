@@ -39,7 +39,7 @@ export type FormsMinAggregateOutputType = {
   projectName: string | null
   department: string | null
   leaderName: string | null
-  status: $Enums.FilingStatus | null
+  status: string | null
   auditComment: string | null
   submitterId: string | null
   submitterName: string | null
@@ -52,7 +52,7 @@ export type FormsMaxAggregateOutputType = {
   projectName: string | null
   department: string | null
   leaderName: string | null
-  status: $Enums.FilingStatus | null
+  status: string | null
   auditComment: string | null
   submitterId: string | null
   submitterName: string | null
@@ -222,7 +222,7 @@ export type FormsGroupByOutputType = {
   projectName: string
   department: string | null
   leaderName: string | null
-  status: $Enums.FilingStatus
+  status: string
   auditComment: string | null
   content: runtime.JsonValue
   submitterId: string
@@ -236,17 +236,18 @@ export type FormsGroupByOutputType = {
   _max: FormsMaxAggregateOutputType | null
 }
 
-type GetFormsGroupByPayload<T extends FormsGroupByArgs> = Prisma.PrismaPromise<
-  Array<
-    Prisma.PickEnumerable<FormsGroupByOutputType, T['by']> & {
-      [P in keyof T & keyof FormsGroupByOutputType]: P extends '_count'
-        ? T[P] extends boolean
-          ? number
+export type GetFormsGroupByPayload<T extends FormsGroupByArgs> =
+  Prisma.PrismaPromise<
+    Array<
+      Prisma.PickEnumerable<FormsGroupByOutputType, T['by']> & {
+        [P in keyof T & keyof FormsGroupByOutputType]: P extends '_count'
+          ? T[P] extends boolean
+            ? number
+            : Prisma.GetScalarType<T[P], FormsGroupByOutputType[P]>
           : Prisma.GetScalarType<T[P], FormsGroupByOutputType[P]>
-        : Prisma.GetScalarType<T[P], FormsGroupByOutputType[P]>
-    }
+      }
+    >
   >
->
 
 export type FormsWhereInput = {
   AND?: Prisma.FormsWhereInput | Prisma.FormsWhereInput[]
@@ -256,7 +257,7 @@ export type FormsWhereInput = {
   projectName?: Prisma.StringFilter<'Forms'> | string
   department?: Prisma.StringNullableFilter<'Forms'> | string | null
   leaderName?: Prisma.StringNullableFilter<'Forms'> | string | null
-  status?: Prisma.EnumFilingStatusFilter<'Forms'> | $Enums.FilingStatus
+  status?: Prisma.StringFilter<'Forms'> | string
   auditComment?: Prisma.StringNullableFilter<'Forms'> | string | null
   content?: Prisma.JsonFilter<'Forms'>
   submitterId?: Prisma.StringFilter<'Forms'> | string
@@ -288,7 +289,7 @@ export type FormsWhereUniqueInput = Prisma.AtLeast<
     projectName?: Prisma.StringFilter<'Forms'> | string
     department?: Prisma.StringNullableFilter<'Forms'> | string | null
     leaderName?: Prisma.StringNullableFilter<'Forms'> | string | null
-    status?: Prisma.EnumFilingStatusFilter<'Forms'> | $Enums.FilingStatus
+    status?: Prisma.StringFilter<'Forms'> | string
     auditComment?: Prisma.StringNullableFilter<'Forms'> | string | null
     content?: Prisma.JsonFilter<'Forms'>
     submitterId?: Prisma.StringFilter<'Forms'> | string
@@ -336,9 +337,7 @@ export type FormsScalarWhereWithAggregatesInput = {
     | Prisma.StringNullableWithAggregatesFilter<'Forms'>
     | string
     | null
-  status?:
-    | Prisma.EnumFilingStatusWithAggregatesFilter<'Forms'>
-    | $Enums.FilingStatus
+  status?: Prisma.StringWithAggregatesFilter<'Forms'> | string
   auditComment?:
     | Prisma.StringNullableWithAggregatesFilter<'Forms'>
     | string
@@ -354,7 +353,7 @@ export type FormsCreateInput = {
   projectName: string
   department?: string | null
   leaderName?: string | null
-  status?: $Enums.FilingStatus
+  status?: string
   auditComment?: string | null
   content: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId: string
@@ -368,7 +367,7 @@ export type FormsUncheckedCreateInput = {
   projectName: string
   department?: string | null
   leaderName?: string | null
-  status?: $Enums.FilingStatus
+  status?: string
   auditComment?: string | null
   content: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId: string
@@ -381,9 +380,7 @@ export type FormsUpdateInput = {
   projectName?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   leaderName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?:
-    | Prisma.EnumFilingStatusFieldUpdateOperationsInput
-    | $Enums.FilingStatus
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   auditComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   content?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -397,9 +394,7 @@ export type FormsUncheckedUpdateInput = {
   projectName?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   leaderName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?:
-    | Prisma.EnumFilingStatusFieldUpdateOperationsInput
-    | $Enums.FilingStatus
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   auditComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   content?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -413,7 +408,7 @@ export type FormsCreateManyInput = {
   projectName: string
   department?: string | null
   leaderName?: string | null
-  status?: $Enums.FilingStatus
+  status?: string
   auditComment?: string | null
   content: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId: string
@@ -426,9 +421,7 @@ export type FormsUpdateManyMutationInput = {
   projectName?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   leaderName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?:
-    | Prisma.EnumFilingStatusFieldUpdateOperationsInput
-    | $Enums.FilingStatus
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   auditComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   content?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -442,9 +435,7 @@ export type FormsUncheckedUpdateManyInput = {
   projectName?: Prisma.StringFieldUpdateOperationsInput | string
   department?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   leaderName?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
-  status?:
-    | Prisma.EnumFilingStatusFieldUpdateOperationsInput
-    | $Enums.FilingStatus
+  status?: Prisma.StringFieldUpdateOperationsInput | string
   auditComment?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   content?: Prisma.JsonNullValueInput | runtime.InputJsonValue
   submitterId?: Prisma.StringFieldUpdateOperationsInput | string
@@ -507,10 +498,6 @@ export type StringFieldUpdateOperationsInput = {
 
 export type NullableStringFieldUpdateOperationsInput = {
   set?: string | null
-}
-
-export type EnumFilingStatusFieldUpdateOperationsInput = {
-  set?: $Enums.FilingStatus
 }
 
 export type DateTimeFieldUpdateOperationsInput = {
@@ -629,7 +616,7 @@ export type $FormsPayload<
       projectName: string
       department: string | null
       leaderName: string | null
-      status: $Enums.FilingStatus
+      status: string
       auditComment: string | null
       content: runtime.JsonValue
       submitterId: string
@@ -1232,7 +1219,7 @@ export interface FormsFieldRefs {
   readonly projectName: Prisma.FieldRef<'Forms', 'String'>
   readonly department: Prisma.FieldRef<'Forms', 'String'>
   readonly leaderName: Prisma.FieldRef<'Forms', 'String'>
-  readonly status: Prisma.FieldRef<'Forms', 'FilingStatus'>
+  readonly status: Prisma.FieldRef<'Forms', 'String'>
   readonly auditComment: Prisma.FieldRef<'Forms', 'String'>
   readonly content: Prisma.FieldRef<'Forms', 'Json'>
   readonly submitterId: Prisma.FieldRef<'Forms', 'String'>
@@ -1435,6 +1422,11 @@ export type FormsFindManyArgs<
    * Skip the first `n` Forms.
    */
   skip?: number
+  /**
+   * {@link https://www.prisma.io/docs/concepts/components/prisma-client/distinct Distinct Docs}
+   *
+   * Filter by unique combinations of Forms.
+   */
   distinct?: Prisma.FormsScalarFieldEnum | Prisma.FormsScalarFieldEnum[]
 }
 

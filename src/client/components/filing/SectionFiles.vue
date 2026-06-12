@@ -91,7 +91,7 @@ const errors = useFormErrors()
 // === 在组件内管理 files 状态 ===
 const files = ref<UploadFile[]>([])
 
-const props = defineProps<{ readonly?: boolean }>()
+defineProps<{ readonly?: boolean }>()
 
 // === 同步逻辑 ===
 const handleUploadSuccess = () => {

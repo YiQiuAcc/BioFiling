@@ -54,8 +54,7 @@ export const authenticate = (
     }
 
     next()
-  } catch (error) {
-    logger.warn(`Auth failed: ${(error as Error).message}`)
+  } catch {
     next(new UnauthorizedError('Token 无效或已过期'))
   }
 }

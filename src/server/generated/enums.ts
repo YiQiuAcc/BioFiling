@@ -8,10 +8,5 @@
  * 🟢 You can import this file directly.
  */
 
-export const FilingStatus = {
-  SUBMITTED: 'SUBMITTED',
-  APPROVED: 'APPROVED',
-  REJECTED: 'REJECTED',
-} as const
-
-export type FilingStatus = (typeof FilingStatus)[keyof typeof FilingStatus]
+// This file is empty because there are no enums in the schema.
+export {}

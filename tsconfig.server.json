@@ -1,15 +1,14 @@
 {
   "compilerOptions": {
     "outDir": "./dist-server",
+    "rootDir": "/src",
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "target": "ES2022",
     "lib": ["ESNext"],
     "types": ["node"],
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/server/*"],
-      "@prisma/client": ["prisma/generated/client"]
+      "@/*": ["./src/server/*"]
     },
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,

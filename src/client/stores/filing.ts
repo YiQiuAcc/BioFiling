@@ -260,15 +260,7 @@ export const useFilingStore = defineStore('filing', () => {
   // === 辅助函数：输入改为 FilingDetail ===
   const mapRecordToForm = (detail: FilingDetail) => {
     // 解构出不需要放入表单的系统字段
-    const {
-      id,
-      status,
-      createdAt,
-      updatedAt,
-      auditComment,
-      submitterName,
-      ...formFields
-    } = detail
+    const { ...formFields } = detail
     // 准备回填数据
     // 强制转换为 any 或 FormDataState 以便进行清洗
     const targetData = { ...formFields } as FormDataState

@@ -4,7 +4,7 @@ import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import path from 'path'
 import logger from '@/utils/logger'
-import { prisma } from '@/utils/prisma'
+import { initializePrisma, prisma } from '@/utils/prisma'
 import { errorHandler, notFoundHandler } from '@/middlewares/errorHandler'
 import { morganMiddleware } from '@/middlewares/morgan'
 import router from '@/routes/index'
@@ -58,30 +58,34 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')))
 app.use(notFoundHandler) // 处理找不到的路由
 app.use(errorHandler) // 处理所有抛出的错误
 
-// 启动服务器
-const server = app.listen(PORT, () => {
-  logger.info(`🚀 Server is running on port ${PORT}`)
-  logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
-  logger.info(`🔗 API endpoints:`)
-  logger.info(`🔑 Auth endpoints: http://localhost:${PORT}/api/auth`)
-  logger.info(`📋 Filing endpoints: http://localhost:${PORT}/api/filing`)
-})
+async function start() {
+  await initializePrisma()
 
-// 处理关闭信号
-const handleShutdown = (signal: string) => {
-  logger.info(`${signal} received, shutting down gracefully`)
-  server.close(() => {
-    logger.info('✅ HTTP server closed')
-    // 断开数据库连接
-    prisma
-      .$disconnect()
-      .then(() => logger.info('✅ Database connection closed'))
-      .catch((err) =>
-        logger.error('❌ Error disconnecting from database:', err),
-      )
-      .finally(() => process.exit(0))
+  const server = app.listen(PORT, () => {
+    logger.info(`🚀 Server is running on port ${PORT}`)
+    logger.info(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`)
+    logger.info(`🔗 API endpoints:`)
+    logger.info(`🔑 Auth endpoints: http://localhost:${PORT}/api/auth`)
+    logger.info(`📋 Filing endpoints: http://localhost:${PORT}/api/filing`)
   })
+
+  // 处理关闭信号
+  const handleShutdown = (signal: string) => {
+    logger.info(`${signal} received, shutting down gracefully`)
+    server.close(() => {
+      logger.info('✅ HTTP server closed')
+      prisma
+        .$disconnect()
+        .then(() => logger.info('✅ Database connection closed'))
+        .catch((err) =>
+          logger.error('❌ Error disconnecting from database:', err),
+        )
+        .finally(() => process.exit(0))
+    })
+  }
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'))
+  process.on('SIGINT', () => handleShutdown('SIGINT'))
 }
 
-process.on('SIGTERM', () => handleShutdown('SIGTERM'))
-process.on('SIGINT', () => handleShutdown('SIGINT'))
+start()

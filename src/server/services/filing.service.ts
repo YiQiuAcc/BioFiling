@@ -4,7 +4,7 @@ import path from 'path'
 import { ForbiddenError, NotFoundError } from '@/utils/errors'
 import logger from '@/utils/logger'
 import { prisma } from '@/utils/prisma'
-import { FormDataSchemaType, FormDataState, User } from '@/types'
+import { FormDataSchemaType, FormDataState } from '@/types'
 
 // 配置常量
 const UPLOAD_ROOT = path.resolve(process.cwd(), 'uploads')

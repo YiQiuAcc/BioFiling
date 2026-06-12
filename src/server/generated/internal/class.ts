@@ -14,21 +14,32 @@ import type * as Prisma from './prismaNamespace.js'
 
 const config: runtime.GetPrismaClientConfig = {
   previewFeatures: [],
-  clientVersion: '7.2.0',
-  engineVersion: '0c8ef2ce45c83248ab3df073180d5eda9e8be7a3',
+  clientVersion: '7.8.0',
+  engineVersion: '3c6e192761c0362d496ed980de936e2f3cebcd3a',
   activeProvider: 'postgresql',
   inlineSchema:
-    '// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../src/server/generated"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\nenum FilingStatus {\n  SUBMITTED // 已提交\n  APPROVED // 已通过\n  REJECTED // 已驳回\n}\n\nmodel Forms {\n  id Int @id @default(autoincrement())\n\n  projectName String  @map("project_name") // 项目名称\n  department  String? // 所在部门\n  leaderName  String? @map("leader_name") // 负责人姓名\n\n  status       FilingStatus @default(SUBMITTED)\n  auditComment String?      @map("audit_comment")\n\n  content       Json\n  // 提交人信息\n  submitterId   String   @map("submitter_id") // NetID\n  submitterName String   @map("submitter_name") // 姓名\n  createdAt     DateTime @default(now()) @map("created_at")\n  updatedAt     DateTime @updatedAt @map("updated_at")\n\n  // 按提交人、状态或时间查询\n  @@index([submitterId])\n  @@index([status])\n  @@index([createdAt])\n  @@map("forms")\n}\n',
+    '// This is your Prisma schema file,\n// learn more about it in the docs: https://pris.ly/d/prisma-schema\n\n// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?\n// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init\n\ngenerator client {\n  provider = "prisma-client"\n  output   = "../src/server/generated"\n}\n\ndatasource db {\n  provider = "postgresql"\n}\n\nmodel Forms {\n  id Int @id @default(autoincrement())\n\n  projectName String  @map("project_name") // 项目名称\n  department  String? // 所在部门\n  leaderName  String? @map("leader_name") // 负责人姓名\n\n  status       String  @default("SUBMITTED")\n  auditComment String? @map("audit_comment")\n\n  content       Json\n  // 提交人信息\n  submitterId   String   @map("submitter_id") // NetID\n  submitterName String   @map("submitter_name") // 姓名\n  createdAt     DateTime @default(now()) @map("created_at")\n  updatedAt     DateTime @updatedAt @map("updated_at")\n\n  // 按提交人、状态或时间查询\n  @@index([submitterId])\n  @@index([status])\n  @@index([createdAt])\n  @@map("forms")\n}\n',
   runtimeDataModel: {
     models: {},
     enums: {},
     types: {},
   },
+  parameterizationSchema: {
+    strings: [],
+    graph: '',
+  },
 }
 
 config.runtimeDataModel = JSON.parse(
-  '{"models":{"Forms":{"fields":[{"name":"id","kind":"scalar","type":"Int"},{"name":"projectName","kind":"scalar","type":"String","dbName":"project_name"},{"name":"department","kind":"scalar","type":"String"},{"name":"leaderName","kind":"scalar","type":"String","dbName":"leader_name"},{"name":"status","kind":"enum","type":"FilingStatus"},{"name":"auditComment","kind":"scalar","type":"String","dbName":"audit_comment"},{"name":"content","kind":"scalar","type":"Json"},{"name":"submitterId","kind":"scalar","type":"String","dbName":"submitter_id"},{"name":"submitterName","kind":"scalar","type":"String","dbName":"submitter_name"},{"name":"createdAt","kind":"scalar","type":"DateTime","dbName":"created_at"},{"name":"updatedAt","kind":"scalar","type":"DateTime","dbName":"updated_at"}],"dbName":"forms"}},"enums":{},"types":{}}',
+  '{"models":{"Forms":{"fields":[{"name":"id","kind":"scalar","type":"Int"},{"name":"projectName","kind":"scalar","type":"String","dbName":"project_name"},{"name":"department","kind":"scalar","type":"String"},{"name":"leaderName","kind":"scalar","type":"String","dbName":"leader_name"},{"name":"status","kind":"scalar","type":"String"},{"name":"auditComment","kind":"scalar","type":"String","dbName":"audit_comment"},{"name":"content","kind":"scalar","type":"Json"},{"name":"submitterId","kind":"scalar","type":"String","dbName":"submitter_id"},{"name":"submitterName","kind":"scalar","type":"String","dbName":"submitter_name"},{"name":"createdAt","kind":"scalar","type":"DateTime","dbName":"created_at"},{"name":"updatedAt","kind":"scalar","type":"DateTime","dbName":"updated_at"}],"dbName":"forms"}},"enums":{},"types":{}}',
 )
+config.parameterizationSchema = {
+  strings: JSON.parse(
+    '["where","Forms.findUnique","Forms.findUniqueOrThrow","orderBy","cursor","Forms.findFirst","Forms.findFirstOrThrow","Forms.findMany","data","Forms.createOne","Forms.createMany","Forms.createManyAndReturn","Forms.updateOne","Forms.updateMany","Forms.updateManyAndReturn","create","update","Forms.upsertOne","Forms.deleteOne","Forms.deleteMany","having","_count","_avg","_sum","_min","_max","Forms.groupBy","Forms.aggregate","AND","OR","NOT","id","projectName","department","leaderName","status","auditComment","content","submitterId","submitterName","createdAt","updatedAt","equals","in","notIn","lt","lte","gt","gte","not","string_contains","string_starts_with","string_ends_with","array_starts_with","array_ends_with","array_contains","contains","startsWith","endsWith","set","increment","decrement","multiply","divide"]',
+  ),
+  graph:
+    'OgsQDhwAACsAMB0AAAQAEB4AACsAMB8CAAAAASABAC0AISEBAC4AISIBAC4AISMBAC0AISQBAC4AISUAAC8AICYBAC0AIScBAC0AIShAADAAISlAADAAIQEAAAABACABAAAAAQAgDhwAACsAMB0AAAQAEB4AACsAMB8CACwAISABAC0AISEBAC4AISIBAC4AISMBAC0AISQBAC4AISUAAC8AICYBAC0AIScBAC0AIShAADAAISlAADAAIQMhAAAxACAiAAAxACAkAAAxACADAAAABAAgAwAABQAwBAAAAQAgAwAAAAQAIAMAAAUAMAQAAAEAIAMAAAAEACADAAAFADAEAAABACALHwIAAAABIAEAAAABIQEAAAABIgEAAAABIwEAAAABJAEAAAABJYAAAAABJgEAAAABJwEAAAABKEAAAAABKUAAAAABAQgAAAkAIAsfAgAAAAEgAQAAAAEhAQAAAAEiAQAAAAEjAQAAAAEkAQAAAAElgAAAAAEmAQAAAAEnAQAAAAEoQAAAAAEpQAAAAAEBCAAACwAwAQgAAAsAMAsfAgA6ACEgAQA3ACEhAQA4ACEiAQA4ACEjAQA3ACEkAQA4ACElgAAAAAEmAQA3ACEnAQA3ACEoQAA5ACEpQAA5ACECAAAAAQAgCAAADgAgCx8CADoAISABADcAISEBADgAISIBADgAISMBADcAISQBADgAISWAAAAAASYBADcAIScBADcAIShAADkAISlAADkAIQIAAAAEACAIAAAQACACAAAABAAgCAAAEAAgAwAAAAEAIA8AAAkAIBAAAA4AIAEAAAABACABAAAABAAgCBUAADIAIBYAADMAIBcAADYAIBgAADUAIBkAADQAICEAADEAICIAADEAICQAADEAIA4cAAAaADAdAAAXABAeAAAaADAfAgAbACEgAQAcACEhAQAdACEiAQAdACEjAQAcACEkAQAdACElAAAeACAmAQAcACEnAQAcACEoQAAfACEpQAAfACEDAAAABAAgAwAAFgAwFAAAFwAgAwAAAAQAIAMAAAUAMAQAAAEAIA4cAAAaADAdAAAXABAeAAAaADAfAgAbACEgAQAcACEhAQAdACEiAQAdACEjAQAcACEkAQAdACElAAAeACAmAQAcACEnAQAcACEoQAAfACEpQAAfACENFQAAIQAgFgAAKgAgFwAAIQAg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',
+}
 
 async function decodeBase64AsWasm(
   wasmBase64: string,
@@ -40,13 +51,15 @@ async function decodeBase64AsWasm(
 
 config.compilerWasm = {
   getRuntime: async () =>
-    await import('@prisma/client/runtime/query_compiler_bg.postgresql.mjs'),
+    await import('@prisma/client/runtime/query_compiler_fast_bg.postgresql.mjs'),
 
   getQueryCompilerWasmModule: async () => {
     const { wasm } =
-      await import('@prisma/client/runtime/query_compiler_bg.postgresql.wasm-base64.mjs')
+      await import('@prisma/client/runtime/query_compiler_fast_bg.postgresql.wasm-base64.mjs')
     return await decodeBase64AsWasm(wasm)
   },
+
+  importName: './query_compiler_fast_bg.js',
 }
 
 export type LogOptions<ClientOptions extends Prisma.PrismaClientOptions> =
@@ -63,7 +76,9 @@ export interface PrismaClientConstructor {
    * Type-safe database client for TypeScript
    * @example
    * ```
-   * const prisma = new PrismaClient()
+   * const prisma = new PrismaClient({
+   *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
+   * })
    * // Fetch zero or more Forms
    * const forms = await prisma.forms.findMany()
    * ```
@@ -92,7 +107,9 @@ export interface PrismaClientConstructor {
  * Type-safe database client for TypeScript
  * @example
  * ```
- * const prisma = new PrismaClient()
+ * const prisma = new PrismaClient({
+ *   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL })
+ * })
  * // Fetch zero or more Forms
  * const forms = await prisma.forms.findMany()
  * ```
@@ -194,11 +211,15 @@ export interface PrismaClient<
    * ])
    * ```
    *
-   * Read more in our [docs](https://www.prisma.io/docs/concepts/components/prisma-client/transactions).
+   * Read more in our [docs](https://www.prisma.io/docs/orm/prisma-client/queries/transactions).
    */
   $transaction<P extends Prisma.PrismaPromise<any>[]>(
     arg: [...P],
-    options?: { isolationLevel?: Prisma.TransactionIsolationLevel },
+    options?: {
+      maxWait?: number
+      timeout?: number
+      isolationLevel?: Prisma.TransactionIsolationLevel
+    },
   ): runtime.Types.Utils.JsPromise<runtime.Types.Utils.UnwrapTuple<P>>
 
   $transaction<R>(

@@ -30,3 +30,5 @@ lerna-debug.log*
 .env.prod
 
 /src/generated/prisma
+.claude/
+uploads/

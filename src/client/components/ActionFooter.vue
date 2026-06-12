@@ -88,7 +88,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useFilingStore } from '@/stores/filing'
 
 const emit = defineEmits(['submit', 'reset', 'audit'])
-const props = defineProps<{
+defineProps<{
   isPreviewMode: boolean
 }>()
 

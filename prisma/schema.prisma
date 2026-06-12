@@ -13,12 +13,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum FilingStatus {
-  SUBMITTED // 已提交
-  APPROVED // 已通过
-  REJECTED // 已驳回
-}
-
 model Forms {
   id Int @id @default(autoincrement())
 
@@ -26,7 +20,7 @@ model Forms {
   department  String? // 所在部门
   leaderName  String? @map("leader_name") // 负责人姓名
 
-  status       FilingStatus @default(SUBMITTED)
+  status       String @default("SUBMITTED")
   auditComment String?      @map("audit_comment")
 
   content       Json
