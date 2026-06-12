@@ -5,7 +5,7 @@
         <div class="logo-box">BIO</div>
         <div class="title-text">
           <h1>生物安全实验室管理系统</h1>
-          <p>资产与实验室管理处 · 生物安全备案</p>
+          <p>生物安全备案管理系统</p>
         </div>
       </div>
       <div class="header-actions">
