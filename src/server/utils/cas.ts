@@ -2,7 +2,6 @@ import axios from 'axios'
 import { parseStringPromise } from 'xml2js'
 import logger from './logger'
 
-/* eslint-disable */
 // 使用环境变量配置 CAS 地址
 const CAS_SERVER_URL =
   process.env.CAS_SERVER_URL || 'https://cas.example.edu.cn/authserver'
@@ -11,7 +10,7 @@ const CAS_VALIDATE_PATH = '/serviceValidate'
 interface CasValidationResult {
   valid: boolean
   user?: string
-  attributes?: Record<string, any> // 扩展属性 (姓名、手机号等)
+  attributes?: Record<string, unknown> // 扩展属性 (姓名、手机号等)
   message?: string
 }
 
@@ -55,7 +54,7 @@ export const validateCasTicket = async (
       const user = successData['cas:user']?.[0]
       // 解析扩展属性
       const rawAttributes = successData['cas:attributes']?.[0] || {}
-      const attributes: Record<string, any> = {}
+      const attributes: Record<string, unknown> = {}
       // 扁平化属性数组 (xml2js 会把内容变成数组)
       for (const key in rawAttributes) {
         if (Array.isArray(rawAttributes[key])) {

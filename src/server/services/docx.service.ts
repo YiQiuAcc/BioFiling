@@ -52,7 +52,7 @@ const getImageDataFromPath = async (
  * 准备渲染数据 (注入图片)
  */
 const prepareRenderData = async (
-  data: Record<string, any>,
+  data: Record<string, unknown>,
 ): Promise<DocxRenderData> => {
   const processed = { ...data } as DocxRenderData
   // 异步处理图片 (Promise.all 提升性能)
@@ -77,7 +77,7 @@ export const docxService = {
   /**
    * 单文件 Buffer 生成
    */
-  async generateBuffer(data: Record<string, any>): Promise<Buffer> {
+  async generateBuffer(data: Record<string, unknown>): Promise<Buffer> {
     const templatePath = path.resolve(process.cwd(), TEMPLATE_FILENAME)
     // 异步读取模板
     let template: Buffer

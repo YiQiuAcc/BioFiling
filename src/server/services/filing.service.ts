@@ -4,6 +4,7 @@ import path from 'path'
 import { ForbiddenError, NotFoundError } from '@/utils/errors'
 import logger from '@/utils/logger'
 import { prisma } from '@/utils/prisma'
+import type { Prisma } from '@/generated/client'
 import { FormDataSchemaType, FormDataState } from '@/types'
 
 // 配置常量
@@ -178,7 +179,7 @@ export const filingService = {
 
   async getAllRecords(params: { keyword?: string; status?: string } = {}) {
     const { keyword, status } = params
-    const whereClause: any = {}
+    const whereClause: Prisma.FormsWhereInput = {}
 
     if (status) whereClause.status = status
     if (keyword) {

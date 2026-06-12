@@ -7,9 +7,12 @@ import { AppError } from '../utils/errors'
 import logger from '../utils/logger'
 
 // 异步函数包装器
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export const asyncHandler = (
-  fn: (req: Request, res: Response, next: NextFunction) => Promise<any> | any,
+  fn: (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => Promise<unknown> | unknown,
 ) => {
   return (req: Request, res: Response, next: NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next)
@@ -28,6 +31,7 @@ export const notFoundHandler = (
 
 // 全局错误处理器
 export const errorHandler: ErrorRequestHandler = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   err: any,
   req: Request,
   res: Response,
@@ -99,7 +103,7 @@ export const errorHandler: ErrorRequestHandler = (
 
   const logLevel = statusCode >= 500 ? 'error' : 'warn'
   // 构建日志对象
-  const logData: Record<string, any> = {
+  const logData: Record<string, unknown> = {
     statusCode,
     url: req.originalUrl,
     method: req.method,
@@ -129,7 +133,7 @@ export const errorHandler: ErrorRequestHandler = (
   // 统一输出日志
   logger.log(logLevel, `${statusCode} - ${message}`, logData)
 
-  const responsePayload: any = { message }
+  const responsePayload: Record<string, unknown> = { message }
 
   // 仅在开发环境或是验证错误时返回详细 errors 数组
   if (errorsData) {

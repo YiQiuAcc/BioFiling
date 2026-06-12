@@ -7,12 +7,12 @@
     "dev": "concurrently -n \"Vite,Server\" -c \"green,blue\" \"vite\" \"nodemon --config nodemon.json\"",
     "build": "vue-tsc -b && vite build && tsup src/server/server.ts --format esm --out-dir dist-server --clean --tsconfig tsconfig.server.json",
     "preview": "vite preview",
-    "start": "node --env-file=.env.prod dist-server/server.js",
+    "start": "cross-env NODE_ENV=production node --env-file=.env.production dist-server/server.js",
     "lint": "eslint src --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
     "format": "prettier --write src",
-    "db:generate": "env-cmd -f .env.development prisma generate",
-    "db:migrate": "env-cmd -f .env.development prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:generate": "cross-env NODE_ENV=development env-cmd -f .env.development prisma generate",
+    "db:migrate": "cross-env NODE_ENV=development env-cmd -f .env.development prisma migrate dev",
+    "db:studio": "env-cmd -f .env.development prisma studio"
   },
   "dependencies": {
     "@libsql/client": "^0.17.3",

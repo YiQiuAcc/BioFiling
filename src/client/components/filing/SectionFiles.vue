@@ -99,7 +99,12 @@ const handleUploadSuccess = () => {
   files.value.forEach((file) => {
     // 处理新上传的文件
     if (file.response && file.status === 'success') {
-      const resp = file.response as any
+      const resp = file.response as {
+        status?: string
+        url?: string
+        dbPath?: string
+        originalName?: string
+      }
       if (resp.dbPath) paths.push(resp.dbPath)
     }
     // 处理已存在的文件 (编辑回显)

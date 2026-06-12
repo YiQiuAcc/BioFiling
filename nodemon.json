@@ -2,5 +2,5 @@
   "watch": ["src/server", ".env.*"],
   "ext": "ts,json",
   "ignore": ["src/client", "node_modules", "dist", "dist-server"],
-  "exec": "tsx --env-file=.env.development --tsconfig tsconfig.server.json src/server/server.ts"
+  "exec": "cross-env NODE_ENV=development tsx --env-file=.env.development --tsconfig tsconfig.server.json src/server/server.ts"
 }

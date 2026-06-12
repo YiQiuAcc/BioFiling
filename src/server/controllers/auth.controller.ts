@@ -43,7 +43,9 @@ export const validateTicket = asyncHandler(
     // 提取用户信息
     const netId = casResult.user
     const attributes = casResult.attributes || {}
-    const name = attributes['cas:username'] || attributes['cas:cn'] || netId
+    const name = (attributes['cas:username'] ||
+      attributes['cas:cn'] ||
+      netId) as string
     const isAdmin = ADMIN_IDS_SET.has(netId)
 
     // 构建 Payload

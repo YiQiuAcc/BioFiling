@@ -194,6 +194,7 @@ export const useFilingStore = defineStore('filing', () => {
       if (idx !== -1) records.value.splice(idx, 1)
     } catch (error) {
       MessagePlugin.error('删除失败')
+      console.error(error)
     }
   }
 
@@ -219,6 +220,7 @@ export const useFilingStore = defineStore('filing', () => {
       return true
     } catch (error) {
       MessagePlugin.error('审核操作失败')
+      console.error(error)
       return false
     }
   }
@@ -242,6 +244,7 @@ export const useFilingStore = defineStore('filing', () => {
       MessagePlugin.success('导出成功')
     } catch (error) {
       MessagePlugin.error('导出失败')
+      console.error(error)
     } finally {
       exporting.value = false
     }
@@ -262,7 +265,7 @@ export const useFilingStore = defineStore('filing', () => {
     // 解构出不需要放入表单的系统字段
     const { ...formFields } = detail
     // 准备回填数据
-    // 强制转换为 any 或 FormDataState 以便进行清洗
+    // 强制转换为 FormDataState 以便进行清洗
     const targetData = { ...formFields } as FormDataState
     // 数据清洗 (后端 null -> 前端默认值)
     if (!targetData.leaderName) targetData.leaderName = ''

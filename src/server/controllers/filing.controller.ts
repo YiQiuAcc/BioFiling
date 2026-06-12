@@ -88,7 +88,7 @@ export const getRecordDetail = asyncHandler(
       isAdmin: req.user!.isAdmin,
     })
 
-    const content = (record.content as Record<string, any>) || {}
+    const content = (record.content as Record<string, unknown>) || {}
 
     // 扁平化数据结构
     const flattenedRecord = {

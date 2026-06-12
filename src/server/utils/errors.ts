@@ -1,6 +1,5 @@
 // 自定义错误类
-/* eslint-disable @typescript-eslint/no-explicit-any */
-export class AppError<T = any> extends Error {
+export class AppError<T = unknown> extends Error {
   public readonly statusCode: number
   public readonly isOperational: boolean
   public readonly details?: T
@@ -33,37 +32,37 @@ export class AppError<T = any> extends Error {
 }
 
 export class NotFoundError extends AppError {
-  constructor(message: string = 'Resource not found', details?: any) {
+  constructor(message: string = 'Resource not found', details?: unknown) {
     super(message, 404, details)
   }
 }
 
-export class ValidationError<T = any> extends AppError<T> {
+export class ValidationError<T = unknown> extends AppError<T> {
   constructor(message: string = 'Validation failed', details?: T) {
     super(message, 400, details)
   }
 }
 
 export class UnauthorizedError extends AppError {
-  constructor(message: string = 'Unauthorized access', details?: any) {
+  constructor(message: string = 'Unauthorized access', details?: unknown) {
     super(message, 401, details)
   }
 }
 
 export class ForbiddenError extends AppError {
-  constructor(message: string = 'Access forbidden', details?: any) {
+  constructor(message: string = 'Access forbidden', details?: unknown) {
     super(message, 403, details)
   }
 }
 
 export class ConflictError extends AppError {
-  constructor(message: string = 'Resource conflict', details?: any) {
+  constructor(message: string = 'Resource conflict', details?: unknown) {
     super(message, 409, details)
   }
 }
 
 export class InternalServerError extends AppError {
-  constructor(message: string = 'Internal server error', details?: any) {
+  constructor(message: string = 'Internal server error', details?: unknown) {
     super(message, 500, details)
   }
 }
@@ -71,7 +70,7 @@ export class InternalServerError extends AppError {
 export class ServiceUnavailableError extends AppError {
   constructor(
     message: string = 'Service temporarily unavailable',
-    details?: any,
+    details?: unknown,
   ) {
     super(message, 503, details)
   }

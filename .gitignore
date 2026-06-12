@@ -15,7 +15,8 @@ lerna-debug.log*
 /dist-server
 
 # env
-.env.*
+.env.development
+.env.production
 
 # Editor directories and files
 .vscode/*
@@ -27,7 +28,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
-.env.prod
 
 /src/generated/prisma
 .claude/
