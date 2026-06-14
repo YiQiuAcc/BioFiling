@@ -1462,7 +1462,6 @@ export type FormsCreateManyArgs<
    * The data used to create many Forms.
    */
   data: Prisma.FormsCreateManyInput | Prisma.FormsCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**
@@ -1484,7 +1483,6 @@ export type FormsCreateManyAndReturnArgs<
    * The data used to create many Forms.
    */
   data: Prisma.FormsCreateManyInput | Prisma.FormsCreateManyInput[]
-  skipDuplicates?: boolean
 }
 
 /**

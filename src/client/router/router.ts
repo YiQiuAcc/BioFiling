@@ -75,25 +75,40 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
+  const isDevMode = import.meta.env.VITE_DISABLE_CAS === 'true'
+
   // 检查用户登录状态
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
-    // 未登录 -> 跳转 CAS
-    authStore.login()
-  } else {
-    // 已有 Token 但内存中无用户信息 (页面刷新)
-    if (authStore.isLoggedIn && !authStore.currentUser) {
-      await authStore.initAuth()
-      // 再次检查状态, 如果 initAuth 内部报错并调用了 clearLocalAuth
-      // 此时 isLoggedIn 应该为 false
-      if (!authStore.isLoggedIn) {
-        // Token 失效, 去登录页（CAS）
-        authStore.login()
+    if (isDevMode) {
+      // 开发模式: 直接后台登录, 完成后继续导航
+      await authStore.login()
+      if (authStore.isLoggedIn) {
+        next()
         return
       }
     }
-    // 只有状态依然正常, 才放行
-    next()
+    // CAS 模式: 跳转 CAS 登录页
+    authStore.login()
+    next(false)
+    return
   }
+
+  // 已有 Token 但内存中无用户信息 (页面刷新)
+  if (authStore.isLoggedIn && !authStore.currentUser) {
+    await authStore.initAuth()
+    if (!authStore.isLoggedIn) {
+      if (isDevMode) {
+        await authStore.login()
+        next()
+        return
+      }
+      authStore.login()
+      next(false)
+      return
+    }
+  }
+  // 只有状态依然正常, 才放行
+  next()
 })
 
 export default router

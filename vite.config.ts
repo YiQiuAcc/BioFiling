@@ -4,6 +4,7 @@ import AutoImport from 'unplugin-auto-import/vite'
 import { TDesignResolver } from 'unplugin-vue-components/resolvers'
 import Components from 'unplugin-vue-components/vite'
 import { defineConfig, loadEnv } from 'vite'
+import { compression } from 'vite-plugin-compression2'
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
@@ -25,6 +26,7 @@ export default defineConfig(({ mode }) => {
           }),
         ],
       }),
+      compression({ algorithms: ['gzip'] }),
     ],
     resolve: {
       alias: {
@@ -37,6 +39,16 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: `http://localhost:${env.PORT || 3000}`,
           changeOrigin: true,
+        },
+      },
+    },
+    build: {
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            vue: ['vue', 'vue-router', 'pinia'],
+            tdesign: ['tdesign-vue-next', 'tdesign-icons-vue-next'],
+          },
         },
       },
     },

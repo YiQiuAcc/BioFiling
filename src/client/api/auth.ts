@@ -15,6 +15,14 @@ export const authAPI = {
   },
 
   /**
+   * 开发模式登录 (跳过 CAS)
+   * POST /api/auth/dev/login
+   */
+  devLogin: () => {
+    return http.post<ApiResponse<LoginResponse>>('/auth/dev/login')
+  },
+
+  /**
    * 验证 Ticket
    * POST /api/auth/cas/validate
    */

@@ -72,6 +72,36 @@ export const validateTicket = asyncHandler(
 )
 
 /**
+ * 开发模式登录 (跳过 CAS)
+ * POST /api/auth/dev/login
+ */
+export const devLogin = asyncHandler(async (_req: Request, res: Response) => {
+  if (process.env.DISABLE_CAS !== 'true') {
+    res.status(403).json({ message: '开发模式登录仅限开发环境使用' })
+    return
+  }
+
+  const payload: User = {
+    netId: 'admin',
+    name: '管理员',
+    isAdmin: true,
+  }
+
+  const token = generateToken(payload)
+  logger.info('[Auth] 开发模式登录成功')
+
+  const response: ApiResponse<LoginResponse> = {
+    message: '开发模式登录成功',
+    data: {
+      token,
+      user: payload,
+    },
+  }
+
+  res.status(200).json(response)
+})
+
+/**
  * 获取当前用户信息
  * GET /api/auth/me
  */

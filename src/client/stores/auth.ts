@@ -38,9 +38,30 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * 触发 CAS 登录 (浏览器跳转)
+   * 触发登录 (CAS 跳转或开发模式直登)
    */
-  const login = () => {
+  const login = async () => {
+    const disableCas = import.meta.env.VITE_DISABLE_CAS === 'true'
+
+    if (disableCas) {
+      try {
+        const res = await authAPI.devLogin()
+        const apiResponse = res.data
+        if (!apiResponse || !apiResponse.data) {
+          throw new Error('Invalid login response')
+        }
+        const { token: newToken, user } = apiResponse.data
+        token.value = newToken
+        currentUser.value = user
+        localStorage.setItem('auth_token', newToken)
+        MessagePlugin.success(apiResponse.message || '开发模式登录成功')
+      } catch (error) {
+        console.error('Dev login failed:', error)
+        MessagePlugin.error('开发模式登录失败')
+      }
+      return
+    }
+
     authAPI.redirectToCasLogin()
   }
 

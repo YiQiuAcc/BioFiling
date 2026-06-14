@@ -27,6 +27,7 @@ process.on('uncaughtException', (error: Error) => {
 
 process.on('unhandledRejection', (reason) => {
   logger.error('Unhandled Rejection:', { reason })
+  process.exit(1)
 })
 
 // 基础中间件
@@ -59,7 +60,12 @@ app.use(notFoundHandler) // 处理找不到的路由
 app.use(errorHandler) // 处理所有抛出的错误
 
 async function start() {
-  await initializePrisma()
+  try {
+    await initializePrisma()
+  } catch (error) {
+    logger.error('Failed to initialize database:', error)
+    process.exit(1)
+  }
 
   const server = app.listen(PORT, () => {
     logger.info(`🚀 Server is running on port ${PORT}`)

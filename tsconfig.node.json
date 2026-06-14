@@ -18,6 +18,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["vite.config.ts"],
+  "include": ["vite.config.ts", "prisma.config.ts"],
   "exclude": ["src/server/**/*"]
 }
